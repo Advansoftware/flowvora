@@ -1,0 +1,39 @@
+{
+  "playlists": [
+    {
+      "id": "q0ff3e-A7DY",
+      "name": "Lo-fi Hip Hop Radio",
+      "type": "stream",
+      "description": "24/7 chill hip hop beats",
+      "thumbnail": "/api/placeholder/300/200"
+    },
+    {
+      "id": "jfKfPfyJRdk",
+      "name": "Lofi Hip Hop Mix",
+      "type": "video",
+      "description": "1 hour study mix",
+      "thumbnail": "/api/placeholder/300/200"
+    },
+    {
+      "id": "4xDzrJKXOOY",
+      "name": "Synthwave Radio",
+      "type": "stream",
+      "description": "Retrowave / Synthwave / Vaporwave",
+      "thumbnail": "/api/placeholder/300/200"
+    },
+    {
+      "id": "DWcJFNfaw9c",
+      "name": "Study Session",
+      "type": "video",
+      "description": "Focus music for work",
+      "thumbnail": "/api/placeholder/300/200"
+    },
+    {
+      "id": "5qap5aO4i9A",
+      "name": "Jazz Lounge",
+      "type": "video",
+      "description": "Smooth jazz for relaxation",
+      "thumbnail": "/api/placeholder/300/200"
+    }
+  ]
+}

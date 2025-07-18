@@ -12,6 +12,9 @@ import {
 } from '@mui/material';
 import { motion } from 'framer-motion';
 
+// Context
+import { PlayerProvider, usePlayer } from '../contexts/PlayerContext';
+
 // Widgets
 import Pomodoro from '../components/widgets/Pomodoro';
 import Tasks from '../components/widgets/Tasks';
@@ -24,12 +27,13 @@ import WelcomeModal from '../components/WelcomeModal';
 import AdSenseComponent from '../components/AdSenseComponent';
 import { ADSENSE_CONFIG } from '../config/adsense';
 
-export default function Home() {
+// Componente principal que utiliza o contexto
+function HomeContent() {
+  const { isPlaying, mounted: playerMounted } = usePlayer();
   const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false); // Começar como false
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
@@ -44,57 +48,22 @@ export default function Home() {
     return () => window.removeEventListener('resize', handleResize);
   }, [theme.breakpoints.values.lg]);
 
-  // Verificar se o vídeo já está tocando
+  // Mostrar modal apenas se não estiver tocando música
   useEffect(() => {
-    const checkVideoPlaying = () => {
-      const iframe = document.querySelector('#youtube-iframe');
-      if (iframe && iframe.contentWindow) {
-        try {
-          // Solicitar estado do player
-          iframe.contentWindow.postMessage('{"event":"command","func":"getPlayerState","args":""}', '*');
-        } catch (error) {
-          console.log('YouTube API não disponível ainda');
-        }
-      }
-    };
-
-    // Escutar mensagens do YouTube
-    const handleMessage = (event) => {
-      if (event.origin !== 'https://www.youtube.com') return;
-      
-      try {
-        const data = JSON.parse(event.data);
-        // Se o player state for 1 (playing), esconder o modal
-        if (data.info && data.info.playerState === 1) {
-          setVideoPlaying(true);
-          setShowWelcome(false);
-        }
-        // Se o player state for diferente de 1 (pausado, parado, etc), mostrar o modal
-        else if (data.info && data.info.playerState !== 1) {
-          setVideoPlaying(false);
+    if (mounted && playerMounted) {
+      // Se não estiver tocando, mostrar modal após um delay
+      if (!isPlaying) {
+        const timer = setTimeout(() => {
           setShowWelcome(true);
-        }
-      } catch (e) {
-        // Ignora erros de parsing
+        }, 2000); // Aguardar 2 segundos para verificar se a música vai começar
+        
+        return () => clearTimeout(timer);
+      } else {
+        // Se estiver tocando, esconder modal
+        setShowWelcome(false);
       }
-    };
-
-    if (mounted) {
-      window.addEventListener('message', handleMessage);
-      
-      // Verificar após um delay para dar tempo do iframe carregar
-      const timer = setTimeout(checkVideoPlaying, 2000);
-      
-      // Verificar periodicamente se o vídeo ainda está tocando
-      const interval = setInterval(checkVideoPlaying, 5000);
-      
-      return () => {
-        window.removeEventListener('message', handleMessage);
-        clearTimeout(timer);
-        clearInterval(interval);
-      };
     }
-  }, [mounted]);
+  }, [mounted, playerMounted, isPlaying]);
 
   const handleStartExperience = () => {
     setShowWelcome(false);
@@ -444,5 +413,14 @@ export default function Home() {
         />
       </Box>
     </>
+  );
+}
+
+// Wrapper principal que fornece o contexto
+export default function Home() {
+  return (
+    <PlayerProvider>
+      <HomeContent />
+    </PlayerProvider>
   );
 }

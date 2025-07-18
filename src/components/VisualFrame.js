@@ -1,489 +1,203 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Fade, 
-  IconButton, 
-  Typography, 
-  Slider,
-  Select,
-  MenuItem,
-  FormControl,
-  Stack,
-} from '@mui/material';
-import { 
-  PlayArrow, 
-  Pause, 
-  VolumeUp, 
-  VolumeOff,
-  VolumeDown,
-  Videocam,
-  Image,
-} from '@mui/icons-material';
+import { useState, useEffect, useRef } from 'react';
+import { Box, Fade } from '@mui/material';
+import YouTube from 'react-youtube';
+import { usePlayer } from '../contexts/PlayerContext';
+import scenes from '../data/scenes.json';
+import PlayerControls from './PlayerControls';
 
-const YT_PLAYLISTS = [
-  {
-    id: 'jfKfPfyJRdk',
-    name: 'Lofi Girl Live',
-    type: 'stream',
-  },
-  {
-    id: 'HuFYqnbVbzY',
-    name: 'Jazz Lofi Relax',
-    type: 'stream',
-  },
-  {
-    id: 'q0ff3e-A7DY',
-    name: '2-Hour Lofi Mix',
-    type: 'video',
-  }
-];
+export default function VisualFrame() {
+  const {
+    currentPlaylistId,
+    displayMode,
+    volume,
+    isPlaying,
+    currentPlaylist,
+    mounted,
+  } = usePlayer();
 
-export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' }) {
-  const [currentVideo, setCurrentVideo] = useState(videoId);
-  const [fadeKey, setFadeKey] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [volume, setVolume] = useState(50);
-  const [displayMode, setDisplayMode] = useState('video');
-  const [showControls, setShowControls] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
+  const [currentScene, setCurrentScene] = useState(0);
+  const [imageError, setImageError] = useState(false);
+  
+  // Refs para controlar os players YouTube
+  const videoPlayerRef = useRef(null);
+  const audioPlayerRef = useRef(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Atualizar vídeo quando o videoId mudar
-  useEffect(() => {
-    if (videoId !== currentVideo) {
-      setFadeKey(prev => prev + 1);
-      setCurrentVideo(videoId);
-    }
-  }, [videoId, currentVideo]);
-
-  // Sincronizar estado com props
-  useEffect(() => {
-    setDisplayMode(showVideo ? 'video' : 'image');
-    setCurrentVideo(videoId);
-  }, [showVideo, videoId]);
-
-  // Configurar volume inicial quando o vídeo carrega
-  useEffect(() => {
-    if (displayMode === 'video' && currentVideo && videoReady) {
-      const iframe = document.querySelector('#youtube-iframe');
-      if (iframe && iframe.contentWindow) {
-        try {
-          iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${volume}"}`, '*');
-          
-          // Verificar se deve iniciar automaticamente
-          if (typeof window !== 'undefined' && window.flowvoraStartVideo) {
-            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-            setIsPlaying(true);
-            window.flowvoraStartVideo = false; // Reset flag
-          }
-        } catch (error) {
-          console.log('YouTube API não disponível ainda');
-        }
-      }
-    }
-  }, [displayMode, currentVideo, volume, videoReady]);
-
-  // Escutar eventos do YouTube para saber quando está pronto
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.origin !== 'https://www.youtube.com') return;
-      
-      try {
-        const data = JSON.parse(event.data);
-        if (data.event === 'video-ready' || data.info?.playerState === 1) {
-          setVideoReady(true);
-        }
-      } catch (e) {
-        // Ignora erros de parsing
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    
-    const iframeId = displayMode === 'video' ? '#youtube-iframe' : '#youtube-iframe-hidden';
-    const iframe = document.querySelector(iframeId);
-    if (iframe && iframe.contentWindow) {
-      try {
-        if (isPlaying) {
-          iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-        } else {
-          iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-        }
-      } catch (error) {
-        console.log('YouTube API não disponível');
-      }
-    }
+  // Opções do YouTube player
+  const youtubeOpts = {
+    height: '100%',
+    width: '100%',
+    playerVars: {
+      autoplay: 1,
+      controls: 0,
+      loop: 1,
+      playlist: currentPlaylistId,
+      rel: 0,
+      showinfo: 0,
+      fs: 0,
+      iv_load_policy: 3,
+    },
   };
 
-  const handleVolumeChange = (event, newValue) => {
-    setVolume(newValue);
-    
-    const iframeId = displayMode === 'video' ? '#youtube-iframe' : '#youtube-iframe-hidden';
-    const iframe = document.querySelector(iframeId);
-    if (iframe && iframe.contentWindow) {
-      try {
-        iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${newValue}"}`, '*');
-      } catch (error) {
-        console.log('YouTube API não disponível');
-      }
-    }
-  };
-
-  const handleSourceChange = (event) => {
-    const value = event.target.value;
-    
-    if (value === 'static') {
-      setDisplayMode('image');
-      // Mantém o vídeo tocando em background (não para a música)
-      // setIsPlaying(false); // Removido para manter tocando
+  // Eventos do YouTube player
+  const onReady = (event, isAudio = false) => {
+    const player = event.target;
+    if (isAudio) {
+      audioPlayerRef.current = player;
+      window.youtubeAudioPlayer = player;
     } else {
-      setDisplayMode('video');
-      setCurrentVideo(value);
-      setIsPlaying(true);
-      setVideoReady(false);
-      setFadeKey(prev => prev + 1);
+      videoPlayerRef.current = player;
+      window.youtubeVideoPlayer = player;
+    }
+    
+    // Configurar volume inicial
+    player.setVolume(volume);
+    player.playVideo();
+    console.log(`Player ${isAudio ? 'áudio' : 'vídeo'} carregado`);
+  };
+
+  const onStateChange = (event) => {
+    // 1 = playing, 2 = paused, 0 = ended
+    const playerState = event.data;
+    console.log('Estado do player:', playerState);
+    
+    // Atualizar estado no contexto através do window
+    if (typeof window !== 'undefined' && window.updatePlayerState) {
+      window.updatePlayerState(playerState === 1);
     }
   };
 
-  const getVolumeIcon = () => {
-    if (volume === 0) return <VolumeOff />;
-    if (volume < 50) return <VolumeDown />;
-    return <VolumeUp />;
+  // Determinar qual imagem usar
+  const getBackgroundImage = () => {
+    if (imageError || !scenes.scenes[currentScene]?.image) {
+      return '/meia-noite.png'; // Imagem padrão
+    }
+    return scenes.scenes[currentScene]?.image;
   };
 
-  const getCurrentSelection = () => {
-    if (displayMode === 'image') return 'static';
-    return currentVideo;
-  };
+  useEffect(() => {
+    if (mounted) {
+      // Rotacionar cenas quando estiver no modo imagem
+      if (displayMode === 'image') {
+        const interval = setInterval(() => {
+          setCurrentScene(prev => (prev + 1) % scenes.scenes.length);
+        }, 10000); // Trocar cena a cada 10 segundos
 
-  const getCurrentPlaylist = () => {
-    return YT_PLAYLISTS.find(p => p.id === currentVideo);
-  };
+        return () => clearInterval(interval);
+      }
+    }
+  }, [displayMode, mounted]);
 
-  const getYouTubeEmbedUrl = (id) => {
-    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&controls=0&loop=1&playlist=${id}&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`;
-  };
+  // Expor funções de controle para o contexto
+  useEffect(() => {
+    if (mounted) {
+      // Adicionar referências dos players ao window para que o hook possa acessá-los
+      window.youtubeVideoPlayer = videoPlayerRef.current;
+      window.youtubeAudioPlayer = audioPlayerRef.current;
+    }
+  }, [mounted]);
 
   if (!mounted) return null;
 
   return (
     <Box
       sx={{
+        position: 'relative',
         width: '100%',
         height: '100%',
-        borderRadius: 4,
+        borderRadius: 3,
         overflow: 'hidden',
-        position: 'relative',
-        backgroundColor: '#0f0f23',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-        border: '2px solid rgba(255, 255, 255, 0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        '&:hover .controls-overlay': {
-          opacity: 1,
-        },
+        backgroundColor: '#000',
       }}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
     >
-      {displayMode === 'video' ? (
-        <Fade in timeout={1000} key={`video-${fadeKey}`}>
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <iframe
-              id="youtube-iframe"
-              src={getYouTubeEmbedUrl(currentVideo)}
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                pointerEvents: 'none',
-                borderRadius: '16px',
-              }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-            
-            {/* Overlay para garantir que não haja interação */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'transparent',
-                pointerEvents: 'none',
-                zIndex: 1,
-                borderRadius: 4,
-              }}
-            />
-          </Box>
-        </Fade>
-      ) : (
-        <Fade in timeout={1000} key="image">
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              backgroundImage: 'url(/meia-noite.png)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {/* Overlay sutil para melhor integração */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'linear-gradient(135deg, rgba(15, 15, 35, 0.1) 0%, rgba(30, 30, 60, 0.1) 100%)',
-                pointerEvents: 'none',
-              }}
-            />
-          </Box>
-        </Fade>
-      )}
-
-      {/* Iframe oculto para manter música quando em modo imagem */}
-      {displayMode === 'image' && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: -1000,
-            left: -1000,
-            width: 1,
-            height: 1,
-            opacity: 0,
-            pointerEvents: 'none',
-          }}
-        >
-          <iframe
-            id="youtube-iframe-hidden"
-            src={getYouTubeEmbedUrl(currentVideo)}
-            style={{
-              width: '1px',
-              height: '1px',
-              border: 'none',
-            }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
-        </Box>
-      )}
-
-      {/* Controles integrados - aparecem no hover */}
-      <Fade in={showControls} timeout={300}>
-        <Box
-          className="controls-overlay"
-          sx={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 70%, transparent 100%)',
-            backdropFilter: 'blur(10px)',
-            padding: 3,
-            zIndex: 10,
-            opacity: 0,
-            transition: 'opacity 0.3s ease',
-            pointerEvents: showControls ? 'auto' : 'none',
-          }}
-        >
-          <Stack spacing={2}>
-            {/* Linha superior - Seleção de fonte e indicador */}
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                {displayMode === 'video' ? (
-                  <Videocam sx={{ color: '#64b5f6', fontSize: '1.2rem' }} />
-                ) : (
-                  <Image sx={{ color: '#81c784', fontSize: '1.2rem' }} />
-                )}
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: 'white',
-                    fontWeight: 500,
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  {displayMode === 'image' 
-                    ? '🌙 Imagem Noturna' 
-                    : getCurrentPlaylist()?.name || 'Lo-fi Stream'
-                  }
-                </Typography>
-              </Box>
-
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Select
-                  value={getCurrentSelection()}
-                  onChange={handleSourceChange}
-                  sx={{
-                    color: 'white',
-                    fontSize: '0.85rem',
-                    '.MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(255, 255, 255, 0.5)',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#64b5f6',
-                    },
-                    '.MuiSelect-icon': {
-                      color: 'rgba(255, 255, 255, 0.7)',
-                    },
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        bgcolor: 'rgba(0, 0, 0, 0.9)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem value="static" sx={{ color: 'white', fontSize: '0.85rem' }}>
-                    📷 Imagem Estática
-                  </MenuItem>
-                  {YT_PLAYLISTS.map((playlist) => (
-                    <MenuItem key={playlist.id} value={playlist.id} sx={{ color: 'white', fontSize: '0.85rem' }}>
-                      🎵 {playlist.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-
-            {/* Linha inferior - Controles de reprodução e volume */}
-            <Stack direction="row" alignItems="center" spacing={2}>
-              {/* Play/Pause */}
-              <IconButton
-                onClick={handlePlayPause}
-                sx={{
-                  backgroundColor: isPlaying ? 'rgba(255, 82, 82, 0.2)' : 'rgba(76, 175, 80, 0.2)',
-                  border: `2px solid ${isPlaying ? '#ff5252' : '#4caf50'}`,
-                  color: isPlaying ? '#ff5252' : '#4caf50',
-                  width: 44,
-                  height: 44,
-                  '&:hover': {
-                    backgroundColor: isPlaying ? 'rgba(255, 82, 82, 0.3)' : 'rgba(76, 175, 80, 0.3)',
-                  },
-                }}
-              >
-                {isPlaying ? <Pause /> : <PlayArrow />}
-              </IconButton>
-
-              {/* Status */}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '0.8rem',
-                  minWidth: '60px',
-                }}
-              >
-                {isPlaying ? 'Tocando' : 'Pausado'}
-              </Typography>
-
-              {/* Volume */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                <IconButton
-                  size="small"
-                  sx={{ 
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    padding: '6px',
-                  }}
-                >
-                  {getVolumeIcon()}
-                </IconButton>
-                
-                <Slider
-                  value={volume}
-                  onChange={handleVolumeChange}
-                  size="small"
-                  sx={{
-                    color: '#64b5f6',
-                    '& .MuiSlider-track': {
-                      border: 'none',
-                    },
-                    '& .MuiSlider-thumb': {
-                      width: 16,
-                      height: 16,
-                      backgroundColor: '#64b5f6',
-                      border: '2px solid currentColor',
-                      '&:hover': {
-                        boxShadow: '0px 0px 0px 8px rgba(100, 181, 246, 0.16)',
-                      },
-                    },
-                    '& .MuiSlider-rail': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    },
-                  }}
-                />
-                
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    minWidth: '30px',
-                    textAlign: 'right',
-                    fontSize: '0.75rem',
-                  }}
-                >
-                  {volume}%
-                </Typography>
-              </Box>
-            </Stack>
-          </Stack>
-        </Box>
-      </Fade>
-
-      {/* Borda interna decorativa */}
+      {/* YouTube Player para modo vídeo */}
       <Box
         sx={{
           position: 'absolute',
-          top: 8,
-          left: 8,
-          right: 8,
-          bottom: 8,
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderRadius: 3,
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          opacity: displayMode === 'video' ? 1 : 0,
+          pointerEvents: displayMode === 'video' ? 'auto' : 'none',
+          transition: 'opacity 0.5s ease',
+          '& iframe': {
+            width: '100%',
+            height: '100%',
+          },
+        }}
+      >
+        <YouTube
+          videoId={currentPlaylistId}
+          opts={youtubeOpts}
+          onReady={(event) => onReady(event, false)}
+          onStateChange={onStateChange}
+          style={{ width: '100%', height: '100%' }}
+        />
+      </Box>
+
+      {/* YouTube Player oculto para modo áudio */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          opacity: 0,
           pointerEvents: 'none',
-          zIndex: 2,
+          visibility: displayMode === 'image' ? 'visible' : 'hidden',
+          '& iframe': {
+            width: '100%',
+            height: '100%',
+          },
+        }}
+      >
+        <YouTube
+          videoId={currentPlaylistId}
+          opts={youtubeOpts}
+          onReady={(event) => onReady(event, true)}
+          onStateChange={onStateChange}
+          style={{ width: '100%', height: '100%' }}
+        />
+      </Box>
+
+      {/* Imagem de fundo - visível apenas em modo imagem */}
+      <Fade in={displayMode === 'image'} timeout={1000}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: `url(${getBackgroundImage()})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: displayMode === 'image' ? 1 : 0,
+            transition: 'all 1s ease',
+          }}
+          onError={() => setImageError(true)}
+        />
+      </Fade>
+
+      {/* Overlay gradiente para melhor legibilidade */}
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '40%',
+          background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.7))',
+          pointerEvents: 'none',
         }}
       />
+
+      {/* Controles do Player */}
+      <PlayerControls />
     </Box>
   );
 }

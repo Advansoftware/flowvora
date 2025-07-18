@@ -12,8 +12,10 @@ import {
 } from '@mui/material';
 import { PlayArrow, MusicNote } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { usePlayer } from '../contexts/PlayerContext';
 
 const WelcomeModal = ({ open, onStart }) => {
+  const { isPlaying, togglePlayPause } = usePlayer();
   const [isClient, setIsClient] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
 
@@ -28,6 +30,11 @@ const WelcomeModal = ({ open, onStart }) => {
   }, []);
 
   const handleStart = () => {
+    // Iniciar a reprodução da música
+    if (!isPlaying) {
+      togglePlayPause();
+    }
+    // Fechar o modal
     onStart();
   };
 
