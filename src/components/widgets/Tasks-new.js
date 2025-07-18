@@ -108,16 +108,16 @@ const Tasks = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'in-progress': return '#f59e0b'; // warning do tema
-      case 'completed': return '#10b981'; // success do tema
-      default: return 'rgba(226, 232, 240, 0.7)'; // text.primary do tema com transparência
+      case 'in-progress': return '#ff9800';
+      case 'completed': return '#4caf50';
+      default: return 'rgba(255, 255, 255, 0.7)';
     }
   };
 
   const getStatusIcon = (status, completed) => {
-    if (completed) return <CheckCircle sx={{ color: '#10b981', fontSize: '1.2rem' }} />;
-    if (status === 'in-progress') return <Circle sx={{ color: '#f59e0b', fontSize: '1.2rem' }} />;
-    return <Circle sx={{ color: 'rgba(226, 232, 240, 0.3)', fontSize: '1.2rem' }} />;
+    if (completed) return <CheckCircle sx={{ color: '#4caf50', fontSize: '1.2rem' }} />;
+    if (status === 'in-progress') return <Circle sx={{ color: '#ff9800', fontSize: '1.2rem' }} />;
+    return <Circle sx={{ color: 'rgba(255, 255, 255, 0.3)', fontSize: '1.2rem' }} />;
   };
 
   const handleKeyPress = (e) => {
@@ -139,7 +139,7 @@ const Tasks = () => {
         }
       };
     }
-  }, [activeTask, addPomodoro]);
+  }, [activeTask]);
 
   if (!mounted) return null;
 
@@ -180,8 +180,8 @@ const Tasks = () => {
                 label={`${completedCount}/${totalCount}`}
                 size="small"
                 sx={{
-                  backgroundColor: completedCount === totalCount ? 'rgba(16, 185, 129, 0.2)' : 'rgba(148, 163, 184, 0.2)',
-                  color: completedCount === totalCount ? '#10b981' : '#94a3b8',
+                  backgroundColor: completedCount === totalCount ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                  color: completedCount === totalCount ? '#4caf50' : 'white',
                   fontSize: '0.7rem',
                 }}
               />
@@ -204,7 +204,7 @@ const Tasks = () => {
                     disabled={!newTask.trim()}
                     size="small"
                     sx={{
-                      color: newTask.trim() ? '#10b981' : 'rgba(226, 232, 240, 0.3)',
+                      color: newTask.trim() ? '#4caf50' : 'rgba(255, 255, 255, 0.3)',
                     }}
                   >
                     <Add />
@@ -221,7 +221,7 @@ const Tasks = () => {
                   borderColor: 'rgba(255, 255, 255, 0.3)',
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#10b981',
+                  borderColor: '#4caf50',
                 },
                 '& input::placeholder': {
                   color: 'rgba(255, 255, 255, 0.5)',
@@ -275,22 +275,22 @@ const Tasks = () => {
                       borderRadius: 2,
                       mb: 1,
                       backgroundColor: task.completed 
-                        ? 'rgba(16, 185, 129, 0.1)' 
+                        ? 'rgba(76, 175, 80, 0.1)' 
                         : task.status === 'in-progress'
-                          ? 'rgba(245, 158, 11, 0.1)'
-                          : 'rgba(226, 232, 240, 0.05)',
+                          ? 'rgba(255, 152, 0, 0.1)'
+                          : 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid',
                       borderColor: task.completed 
-                        ? 'rgba(16, 185, 129, 0.3)' 
+                        ? 'rgba(76, 175, 80, 0.3)' 
                         : task.status === 'in-progress'
-                          ? 'rgba(245, 158, 11, 0.3)'
-                          : 'rgba(226, 232, 240, 0.1)',
+                          ? 'rgba(255, 152, 0, 0.3)'
+                          : 'rgba(255, 255, 255, 0.1)',
                       '&:hover': {
                         backgroundColor: task.completed 
-                          ? 'rgba(16, 185, 129, 0.15)' 
+                          ? 'rgba(76, 175, 80, 0.15)' 
                           : task.status === 'in-progress'
-                            ? 'rgba(245, 158, 11, 0.15)'
-                            : 'rgba(226, 232, 240, 0.1)',
+                            ? 'rgba(255, 152, 0, 0.15)'
+                            : 'rgba(255, 255, 255, 0.1)',
                       },
                       flexDirection: 'column',
                       alignItems: 'stretch',
@@ -309,7 +309,7 @@ const Tasks = () => {
                           color: getStatusColor(task.status),
                           padding: '2px',
                           '&.Mui-checked': {
-                            color: '#10b981',
+                            color: '#4caf50',
                           },
                         }}
                       />
@@ -319,8 +319,8 @@ const Tasks = () => {
                           variant="body2"
                           sx={{
                             color: task.completed 
-                              ? 'rgba(226, 232, 240, 0.6)' 
-                              : 'rgba(226, 232, 240, 0.9)',
+                              ? 'rgba(255, 255, 255, 0.6)' 
+                              : 'rgba(255, 255, 255, 0.9)',
                             textDecoration: task.completed ? 'line-through' : 'none',
                             fontSize: '0.85rem',
                             lineHeight: 1.3,
@@ -335,11 +335,11 @@ const Tasks = () => {
                         onClick={() => deleteTask(task.id)}
                         size="small"
                         sx={{
-                          color: 'rgba(226, 232, 240, 0.4)',
+                          color: 'rgba(255, 255, 255, 0.4)',
                           padding: '4px',
                           '&:hover': {
-                            color: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            color: '#f44336',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
                           },
                         }}
                       >
@@ -357,9 +357,9 @@ const Tasks = () => {
                             sx={{
                               height: '20px',
                               fontSize: '0.7rem',
-                              backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                              color: '#ef4444',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              backgroundColor: 'rgba(255, 99, 71, 0.2)',
+                              color: '#ff6347',
+                              border: '1px solid rgba(255, 99, 71, 0.3)',
                             }}
                           />
                         )}
@@ -372,37 +372,41 @@ const Tasks = () => {
                             sx={{
                               height: '20px',
                               fontSize: '0.7rem',
-                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                              color: '#f59e0b',
-                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              backgroundColor: 'rgba(255, 152, 0, 0.2)',
+                              color: '#ff9800',
+                              border: '1px solid rgba(255, 152, 0, 0.3)',
                             }}
                           />
                         )}
                       </Stack>
 
                       {!task.completed && (
-                        <Tooltip title={task.status === 'in-progress' ? 'Pausar tarefa' : 'Iniciar tarefa'}>
-                          <IconButton
-                            onClick={() => startTask(task.id)}
-                            size="small"
-                            sx={{
-                              color: task.status === 'in-progress' ? '#f59e0b' : '#10b981',
+                        <Button
+                          onClick={() => startTask(task.id)}
+                          size="small"
+                          startIcon={task.status === 'in-progress' ? <Pause /> : <PlayArrow />}
+                          variant="outlined"
+                          sx={{
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            fontSize: '0.7rem',
+                            height: '24px',
+                            borderColor: task.status === 'in-progress' ? '#ff9800' : '#4caf50',
+                            color: task.status === 'in-progress' ? '#ff9800' : '#4caf50',
+                            backgroundColor: task.status === 'in-progress' 
+                              ? 'rgba(255, 152, 0, 0.1)' 
+                              : 'rgba(76, 175, 80, 0.1)',
+                            '&:hover': {
                               backgroundColor: task.status === 'in-progress' 
-                                ? 'rgba(245, 158, 11, 0.1)' 
-                                : 'rgba(16, 185, 129, 0.1)',
-                              border: `1px solid ${task.status === 'in-progress' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                              width: 28,
-                              height: 28,
-                              '&:hover': {
-                                backgroundColor: task.status === 'in-progress' 
-                                  ? 'rgba(245, 158, 11, 0.2)' 
-                                  : 'rgba(16, 185, 129, 0.2)',
-                              },
-                            }}
-                          >
-                            {task.status === 'in-progress' ? <Pause sx={{ fontSize: '1rem' }} /> : <PlayArrow sx={{ fontSize: '1rem' }} />}
-                          </IconButton>
-                        </Tooltip>
+                                ? 'rgba(255, 152, 0, 0.2)' 
+                                : 'rgba(76, 175, 80, 0.2)',
+                              borderColor: task.status === 'in-progress' ? '#ff9800' : '#4caf50',
+                            },
+                          }}
+                        >
+                          {task.status === 'in-progress' ? 'Pausar' : 'Iniciar'}
+                        </Button>
                       )}
                     </Box>
                   </ListItem>
@@ -418,15 +422,15 @@ const Tasks = () => {
                 textAlign: 'center',
                 py: 1,
                 px: 2,
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 borderRadius: 2,
-                border: '1px solid rgba(16, 185, 129, 0.2)',
+                border: '1px solid rgba(76, 175, 80, 0.2)',
               }}
             >
               <Typography 
                 variant="caption" 
                 sx={{ 
-                  color: '#10b981',
+                  color: '#4caf50',
                   fontSize: '0.75rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -434,7 +438,7 @@ const Tasks = () => {
                   gap: 1,
                 }}
               >
-                💡 Clique no ícone ▶️ para iniciar uma tarefa
+                💡 Clique em "Iniciar" numa tarefa para começar a trabalhar
               </Typography>
             </Box>
           )}

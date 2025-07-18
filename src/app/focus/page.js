@@ -18,6 +18,7 @@ import Tasks from '../../components/widgets/Tasks';
 // Componentes visuais
 import VisualFrame from '../../components/VisualFrame';
 import RainEffect from '../../components/RainEffect';
+import ActiveTaskStatus from '../../components/ActiveTaskStatus';
 
 export default function FocusPage() {
   const theme = useTheme();
@@ -72,6 +73,9 @@ export default function FocusPage() {
         background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
       }}
     >
+      {/* Status da tarefa ativa */}
+      <ActiveTaskStatus />
+
       {/* Efeito de chuva de fundo */}
       <RainEffect />
 

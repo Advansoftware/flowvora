@@ -21,8 +21,13 @@ const Pomodoro = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [mode, setMode] = useState('focus');
   const [cycles, setCycles] = useState(0);
+  const [mounted, setMounted] = useState(false);
   
   const intervalRef = useRef(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   const modes = {
     focus: { duration: 25 * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
@@ -48,6 +53,11 @@ const Pomodoro = () => {
           const nextMode = cycles > 0 && cycles % 4 === 3 ? 'longBreak' : 'shortBreak';
           setMode(nextMode);
           setTimeLeft(modes[nextMode].duration);
+          
+          // Adicionar pomodoro à tarefa ativa
+          if (typeof window !== 'undefined' && window.flowvoraAddPomodoro) {
+            window.flowvoraAddPomodoro();
+          }
         } else {
           setMode('focus');
           setTimeLeft(modes.focus.duration);
@@ -57,7 +67,7 @@ const Pomodoro = () => {
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, timeLeft, mode, cycles]);
+  }, [isRunning, timeLeft, mode, cycles, modes]);
 
   const toggleTimer = () => {
     setIsRunning(!isRunning);
@@ -79,6 +89,8 @@ const Pomodoro = () => {
     setTimeLeft(modes[newMode].duration);
     setIsRunning(false);
   };
+
+  if (!mounted) return null;
 
   return (
     <Fade in timeout={800}>

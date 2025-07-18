@@ -48,6 +48,7 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
   const [displayMode, setDisplayMode] = useState('video');
   const [showControls, setShowControls] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -69,37 +70,51 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
 
   // Configurar volume inicial quando o vídeo carrega
   useEffect(() => {
-    if (displayMode === 'video' && currentVideo) {
-      const timer = setTimeout(() => {
-        const iframe = document.querySelector('#youtube-iframe');
-        if (iframe && iframe.contentWindow) {
-          try {
-            iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${volume}"}`, '*');
-          } catch (error) {
-            console.log('YouTube API não disponível ainda');
-          }
+    if (displayMode === 'video' && currentVideo && videoReady) {
+      const iframe = document.querySelector('#youtube-iframe');
+      if (iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${volume}"}`, '*');
+        } catch (error) {
+          console.log('YouTube API não disponível ainda');
         }
-      }, 2000); // Aguarda 2 segundos para o iframe carregar
-
-      return () => clearTimeout(timer);
+      }
     }
-  }, [displayMode, currentVideo, volume]);
+  }, [displayMode, currentVideo, volume, videoReady]);
+
+  // Escutar eventos do YouTube para saber quando está pronto
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.origin !== 'https://www.youtube.com') return;
+      
+      try {
+        const data = JSON.parse(event.data);
+        if (data.event === 'video-ready' || data.info?.playerState === 1) {
+          setVideoReady(true);
+        }
+      } catch (e) {
+        // Ignora erros de parsing
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
     
-    if (displayMode === 'video') {
-      const iframe = document.querySelector('#youtube-iframe');
-      if (iframe && iframe.contentWindow) {
-        try {
-          if (isPlaying) {
-            iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-          } else {
-            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-          }
-        } catch (error) {
-          console.log('YouTube API não disponível');
+    const iframeId = displayMode === 'video' ? '#youtube-iframe' : '#youtube-iframe-hidden';
+    const iframe = document.querySelector(iframeId);
+    if (iframe && iframe.contentWindow) {
+      try {
+        if (isPlaying) {
+          iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+        } else {
+          iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
         }
+      } catch (error) {
+        console.log('YouTube API não disponível');
       }
     }
   };
@@ -107,14 +122,13 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
   const handleVolumeChange = (event, newValue) => {
     setVolume(newValue);
     
-    if (displayMode === 'video') {
-      const iframe = document.querySelector('#youtube-iframe');
-      if (iframe && iframe.contentWindow) {
-        try {
-          iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${newValue}"}`, '*');
-        } catch (error) {
-          console.log('YouTube API não disponível');
-        }
+    const iframeId = displayMode === 'video' ? '#youtube-iframe' : '#youtube-iframe-hidden';
+    const iframe = document.querySelector(iframeId);
+    if (iframe && iframe.contentWindow) {
+      try {
+        iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${newValue}"}`, '*');
+      } catch (error) {
+        console.log('YouTube API não disponível');
       }
     }
   };
@@ -124,17 +138,19 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
     
     if (value === 'static') {
       setDisplayMode('image');
-      setIsPlaying(false);
+      // Mantém o vídeo tocando em background (não para a música)
+      // setIsPlaying(false); // Removido para manter tocando
     } else {
       setDisplayMode('video');
       setCurrentVideo(value);
       setIsPlaying(true);
+      setVideoReady(false);
       setFadeKey(prev => prev + 1);
     }
   };
 
   const getVolumeIcon = () => {
-    if (volume === 0 || displayMode === 'image') return <VolumeOff />;
+    if (volume === 0) return <VolumeOff />;
     if (volume < 50) return <VolumeDown />;
     return <VolumeUp />;
   };
@@ -253,6 +269,32 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
         </Fade>
       )}
 
+      {/* Iframe oculto para manter música quando em modo imagem */}
+      {displayMode === 'image' && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: -1000,
+            left: -1000,
+            width: 1,
+            height: 1,
+            opacity: 0,
+            pointerEvents: 'none',
+          }}
+        >
+          <iframe
+            id="youtube-iframe-hidden"
+            src={getYouTubeEmbedUrl(currentVideo)}
+            style={{
+              width: '1px',
+              height: '1px',
+              border: 'none',
+            }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          />
+        </Box>
+      )}
+
       {/* Controles integrados - aparecem no hover */}
       <Fade in={showControls} timeout={300}>
         <Box
@@ -342,7 +384,6 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
               {/* Play/Pause */}
               <IconButton
                 onClick={handlePlayPause}
-                disabled={displayMode === 'image'}
                 sx={{
                   backgroundColor: isPlaying ? 'rgba(255, 82, 82, 0.2)' : 'rgba(76, 175, 80, 0.2)',
                   border: `2px solid ${isPlaying ? '#ff5252' : '#4caf50'}`,
@@ -351,11 +392,6 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
                   height: 44,
                   '&:hover': {
                     backgroundColor: isPlaying ? 'rgba(255, 82, 82, 0.3)' : 'rgba(76, 175, 80, 0.3)',
-                  },
-                  '&:disabled': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    border: '2px solid rgba(255, 255, 255, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.3)',
                   },
                 }}
               >
@@ -371,16 +407,15 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
                   minWidth: '60px',
                 }}
               >
-                {displayMode === 'image' ? 'Silêncio' : (isPlaying ? 'Tocando' : 'Pausado')}
+                {isPlaying ? 'Tocando' : 'Pausado'}
               </Typography>
 
               {/* Volume */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
                 <IconButton
                   size="small"
-                  disabled={displayMode === 'image'}
                   sx={{ 
-                    color: displayMode === 'image' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.8)',
+                    color: 'rgba(255, 255, 255, 0.8)',
                     padding: '6px',
                   }}
                 >
@@ -390,17 +425,16 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
                 <Slider
                   value={volume}
                   onChange={handleVolumeChange}
-                  disabled={displayMode === 'image'}
                   size="small"
                   sx={{
-                    color: displayMode === 'image' ? 'rgba(255, 255, 255, 0.3)' : '#64b5f6',
+                    color: '#64b5f6',
                     '& .MuiSlider-track': {
                       border: 'none',
                     },
                     '& .MuiSlider-thumb': {
                       width: 16,
                       height: 16,
-                      backgroundColor: displayMode === 'image' ? 'rgba(255, 255, 255, 0.3)' : '#64b5f6',
+                      backgroundColor: '#64b5f6',
                       border: '2px solid currentColor',
                       '&:hover': {
                         boxShadow: '0px 0px 0px 8px rgba(100, 181, 246, 0.16)',
