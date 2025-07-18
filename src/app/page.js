@@ -25,6 +25,7 @@ import RainEffect from '../components/RainEffect';
 import ActiveTaskStatus from '../components/ActiveTaskStatus';
 import WelcomeModal from '../components/WelcomeModal';
 import AdSenseComponent from '../components/AdSenseComponent';
+import ClientOnly from '../components/ClientOnly';
 import { ADSENSE_CONFIG } from '../config/adsense';
 
 // Componente principal que utiliza o contexto
@@ -33,20 +34,29 @@ function HomeContent() {
   const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true); // Sempre iniciar com modal
-  const [showMainContent, setShowMainContent] = useState(false); // Sempre iniciar sem conteúdo
+  const [showWelcome, setShowWelcome] = useState(false); // Iniciar como false para evitar hidratação
+  const [showMainContent, setShowMainContent] = useState(false);
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
-    setIsMobile(window.innerWidth < theme.breakpoints.values.lg);
     
-    const handleResize = () => {
+    // Verificar se é primeira visita para mostrar modal
+    const hasVisited = localStorage.getItem('lofivora-has-visited');
+    if (!hasVisited) {
+      setShowWelcome(true);
+    } else {
+      setShowMainContent(true);
+    }
+    
+    // Configurar responsividade
+    const updateIsMobile = () => {
       setIsMobile(window.innerWidth < theme.breakpoints.values.lg);
     };
     
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    return () => window.removeEventListener('resize', updateIsMobile);
   }, [theme.breakpoints.values.lg]);
 
   // Lógica do modal: SEMPRE mostrar na primeira interação (início da sessão)
@@ -59,6 +69,9 @@ function HomeContent() {
   }, [mounted, playerMounted]);
 
   const handleStartExperience = () => {
+    // Marcar que o usuário visitou o site
+    localStorage.setItem('lofivora-has-visited', 'true');
+    
     // Iniciar o player quando o usuário clicar em "Entrar no Flow"
     if (isReady && !isPlaying) {
       startPlaying();
@@ -70,7 +83,6 @@ function HomeContent() {
   if (!mounted || !playerMounted) {
     return (
       <Box
-        suppressHydrationWarning
         sx={{
           minHeight: '100vh',
           width: '100vw',
@@ -139,7 +151,6 @@ function HomeContent() {
   return (
     <>
       <Box
-        suppressHydrationWarning
         sx={{
           minHeight: '100vh',
           width: '100vw',
@@ -437,8 +448,31 @@ function HomeContent() {
 // Wrapper principal que fornece o contexto
 export default function Home() {
   return (
-    <PlayerProvider>
-      <HomeContent />
-    </PlayerProvider>
+    <ClientOnly fallback={
+      <Box
+        sx={{
+          minHeight: '100vh',
+          width: '100vw',
+          background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Box
+          sx={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+          }}
+        >
+          🧘‍♀️ Carregando LofiVora...
+        </Box>
+      </Box>
+    }>
+      <PlayerProvider>
+        <HomeContent />
+      </PlayerProvider>
+    </ClientOnly>
   );
 }

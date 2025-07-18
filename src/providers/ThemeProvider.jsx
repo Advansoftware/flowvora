@@ -208,7 +208,7 @@ export const ThemeProvider = ({ children }) => {
   // Carregar preferência do tema do localStorage
   useEffect(() => {
     if (mounted && typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('flowvora-theme');
+      const savedTheme = localStorage.getItem('lofivora-theme');
       if (savedTheme) {
         setIsDarkMode(savedTheme === 'dark');
       }
@@ -218,7 +218,7 @@ export const ThemeProvider = ({ children }) => {
   // Salvar preferência do tema no localStorage
   useEffect(() => {
     if (mounted && typeof window !== 'undefined') {
-      localStorage.setItem('flowvora-theme', isDarkMode ? 'dark' : 'light');
+      localStorage.setItem('lofivora-theme', isDarkMode ? 'dark' : 'light');
     }
   }, [isDarkMode, mounted]);
 

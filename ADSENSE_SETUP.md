@@ -1,4 +1,4 @@
-# FlowVora - Configuração do Google AdSense
+# LofiVora - Configuração do Google AdSense
 
 ## Como configurar o Google AdSense
 
@@ -15,17 +15,17 @@ Após aprovação, crie 3 unidades de anúncio:
 #### Anúncio 1: Sidebar Desktop
 - Tipo: Display
 - Tamanho: 160x600 (Wide Skyscraper)
-- Nome: "FlowVora Sidebar"
+- Nome: "LofiVora Sidebar"
 
 #### Anúncio 2: Banner Mobile
 - Tipo: Display  
 - Tamanho: Responsivo
-- Nome: "FlowVora Mobile Banner"
+- Nome: "LofiVora Mobile Banner"
 
 #### Anúncio 3: Banner Inferior
 - Tipo: Display
 - Tamanho: 728x90 (Leaderboard)
-- Nome: "FlowVora Bottom Banner"
+- Nome: "LofiVora Bottom Banner"
 
 ### 3. Atualizar configuração
 

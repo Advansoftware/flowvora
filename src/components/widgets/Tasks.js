@@ -36,7 +36,7 @@ const Tasks = () => {
   // Carregar tarefas do localStorage
   useEffect(() => {
     setMounted(true);
-    const savedTasks = localStorage.getItem('flowvora-tasks');
+    const savedTasks = localStorage.getItem('lofivora-tasks');
     if (savedTasks) {
       try {
         setTasks(JSON.parse(savedTasks));
@@ -49,7 +49,7 @@ const Tasks = () => {
   // Salvar tarefas no localStorage
   useEffect(() => {
     if (mounted && tasks.length >= 0) {
-      localStorage.setItem('flowvora-tasks', JSON.stringify(tasks));
+      localStorage.setItem('lofivora-tasks', JSON.stringify(tasks));
     }
   }, [tasks, mounted]);
 
@@ -100,13 +100,13 @@ const Tasks = () => {
     if (typeof window !== 'undefined') {
       if (isStarting) {
         // Iniciar tarefa - iniciar Pomodoro
-        if (window.flowvoraStartPomodoro) {
-          window.flowvoraStartPomodoro();
+        if (window.lofivoraStartPomodoro) {
+          window.lofivoraStartPomodoro();
         }
       } else {
         // Pausar tarefa - pausar Pomodoro
-        if (window.flowvoraPausePomodoro) {
-          window.flowvoraPausePomodoro();
+        if (window.lofivoraPausePomodoro) {
+          window.lofivoraPausePomodoro();
         }
       }
     }
@@ -192,13 +192,13 @@ const Tasks = () => {
   // Expor funções globais para controle das tarefas e pomodoro
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.flowvoraAddPomodoro = () => {
+      window.lofivoraAddPomodoro = () => {
         if (activeTask) {
           addPomodoro(activeTask.id);
         }
       };
 
-      window.flowvoraRemovePomodoro = () => {
+      window.lofivoraRemovePomodoro = () => {
         if (activeTask) {
           removePomodoro(activeTask.id);
         }

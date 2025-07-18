@@ -21,12 +21,10 @@ const WelcomeModal = ({ open, onStart }) => {
 
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== 'undefined') {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    }
+    setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
   }, []);
 
   const handleStart = () => {
@@ -167,7 +165,7 @@ const WelcomeModal = ({ open, onStart }) => {
                     letterSpacing: '-0.02em',
                   }}
                 >
-                  FlowVora
+                  LofiVora
                 </Typography>
                 
                 <Typography

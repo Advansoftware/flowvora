@@ -40,18 +40,14 @@ export function PlayerProvider({ children }) {
   useEffect(() => {
     setMounted(true);
     
-    // Carregar modo de display salvo
-    if (typeof window !== 'undefined') {
-      const savedMode = localStorage.getItem('flowvora-display-mode');
-      if (savedMode) setDisplayMode(savedMode);
-    }
+    // Carregar modo de display salvo apenas no cliente
+    const savedMode = localStorage.getItem('lofivora-display-mode');
+    if (savedMode) setDisplayMode(savedMode);
   }, []);
 
   // Salvar preferências
   const savePreference = (key, value) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`flowvora-${key}`, value);
-    }
+    localStorage.setItem(`lofivora-${key}`, value);
   };
 
   // Funções de controle adaptadas

@@ -2,15 +2,15 @@ import { ThemeProvider } from '../providers/ThemeProvider';
 import "./globals.css";
 
 export const metadata = {
-  title: "FlowVora - Your Personal Lo-fi Focus Space",
+  title: "LofiVora - Your Personal Lo-fi Focus Space",
   description: "Uma aplicação web responsiva que simula uma rádio Lo-fi para foco e produtividade. Sinta-se calmo e imerso com nossa seleção de ambientes relaxantes.",
   keywords: ["lo-fi", "foco", "produtividade", "música", "concentração", "relaxamento"],
-  authors: [{ name: "FlowVora Team" }],
+  authors: [{ name: "LofiVora Team" }],
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
-    title: "FlowVora - Your Personal Lo-fi Focus Space",
+    title: "LofiVora - Your Personal Lo-fi Focus Space",
     description: "Ambiente relaxante para foco e produtividade com música lo-fi",
     type: "website",
   },

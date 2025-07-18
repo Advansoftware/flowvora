@@ -24,7 +24,7 @@ const ActiveTaskStatus = () => {
     setMounted(true);
     
     const updateActiveTask = () => {
-      const savedTasks = localStorage.getItem('flowvora-tasks');
+      const savedTasks = localStorage.getItem('lofivora-tasks');
       if (savedTasks) {
         try {
           const tasks = JSON.parse(savedTasks);
@@ -46,14 +46,14 @@ const ActiveTaskStatus = () => {
   }, []);
 
   const addPomodoroToActiveTask = () => {
-    if (activeTask && typeof window !== 'undefined' && window.flowvoraAddPomodoro) {
-      window.flowvoraAddPomodoro();
+    if (activeTask && typeof window !== 'undefined' && window.lofivoraAddPomodoro) {
+      window.lofivoraAddPomodoro();
     }
   };
 
   const removePomodoroFromActiveTask = () => {
-    if (activeTask && typeof window !== 'undefined' && window.flowvoraRemovePomodoro) {
-      window.flowvoraRemovePomodoro();
+    if (activeTask && typeof window !== 'undefined' && window.lofivoraRemovePomodoro) {
+      window.lofivoraRemovePomodoro();
     }
   };
 

@@ -55,8 +55,8 @@ const Pomodoro = () => {
           setTimeLeft(modes[nextMode].duration);
           
           // Adicionar pomodoro à tarefa ativa
-          if (typeof window !== 'undefined' && window.flowvoraAddPomodoro) {
-            window.flowvoraAddPomodoro();
+          if (typeof window !== 'undefined' && window.lofivoraAddPomodoro) {
+            window.lofivoraAddPomodoro();
           }
         } else {
           setMode('focus');
@@ -101,8 +101,8 @@ const Pomodoro = () => {
   // Expor funções globais para controle do Pomodoro pelas tarefas
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.flowvoraStartPomodoro = startTimer;
-      window.flowvoraPausePomodoro = pauseTimer;
+      window.lofivoraStartPomodoro = startTimer;
+      window.lofivoraPausePomodoro = pauseTimer;
     }
   }, []);
 

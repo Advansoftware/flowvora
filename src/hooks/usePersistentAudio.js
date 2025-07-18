@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-/**
- * Hook personalizado para áudio persistente que continua tocando mesmo após reload da página
+/*  // Recuperar posição salva de um vídeo
+  const getVideoPosition = useCallback((videoId) => {
+    if (typeof window !== 'undefined' && videoId) {
+      const positionsKey = 'lofivora-video-positions'; Hook personalizado para áudio persistente que continua tocando mesmo após reload da página
  * Utiliza localStorage para manter o estado de reprodução e posição de cada música
  */
 export const usePersistentAudio = () => {
@@ -18,16 +20,16 @@ export const usePersistentAudio = () => {
   // Carregar estado do localStorage quando o componente montar
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedState = localStorage.getItem('flowvora-audio-state');
+      const savedState = localStorage.getItem('lofivora-audio-state');
       
       // Limpar interação do usuário ao recarregar a página (nova sessão)
       // Mas manter se a música estava tocando (indicando que houve interação prévia)
       const wasPlaying = savedState ? JSON.parse(savedState).isPlaying : false;
       if (!wasPlaying) {
-        localStorage.removeItem('flowvora-user-interaction');
+        localStorage.removeItem('lofivora-user-interaction');
         setHasUserInteracted(false);
       } else {
-        const userInteraction = localStorage.getItem('flowvora-user-interaction');
+        const userInteraction = localStorage.getItem('lofivora-user-interaction');
         if (userInteraction) {
           setHasUserInteracted(true);
         }
@@ -40,7 +42,7 @@ export const usePersistentAudio = () => {
           setVolume(state.volume || 50);
           setIsMuted(state.isMuted || false);
           // Só restaurar o estado de playing se houve interação prévia
-          const userInteraction = localStorage.getItem('flowvora-user-interaction');
+          const userInteraction = localStorage.getItem('lofivora-user-interaction');
           setIsPlaying(userInteraction ? (state.isPlaying || false) : false);
         } catch (error) {
           console.warn('Erro ao carregar estado do áudio:', error);
@@ -62,14 +64,14 @@ export const usePersistentAudio = () => {
         isMuted,
         lastUpdate: Date.now()
       };
-      localStorage.setItem('flowvora-audio-state', JSON.stringify(state));
+      localStorage.setItem('lofivora-audio-state', JSON.stringify(state));
     }
   }, [isPlaying, currentVideo, volume, isMuted]);
 
   // Salvar posição atual do vídeo
   const saveVideoPosition = useCallback((videoId, currentTime) => {
     if (typeof window !== 'undefined' && videoId && currentTime > 0) {
-      const positionsKey = 'flowvora-video-positions';
+      const positionsKey = 'lofivora-video-positions';
       const savedPositions = localStorage.getItem(positionsKey);
       const positions = savedPositions ? JSON.parse(savedPositions) : {};
       
@@ -105,7 +107,7 @@ export const usePersistentAudio = () => {
     if (!hasUserInteracted) {
       setHasUserInteracted(true);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('flowvora-user-interaction', 'true');
+        localStorage.setItem('lofivora-user-interaction', 'true');
       }
     }
   }, [hasUserInteracted]);
