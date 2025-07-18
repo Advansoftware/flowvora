@@ -81,7 +81,6 @@ yarn start
 ```
 src/
 ├── app/                    # App Router do Next.js
-│   ├── focus/             # Página modo foco (sem AdSense)
 │   ├── layout.js          # Layout raiz com ThemeProvider
 │   └── page.js            # Página principal
 ├── components/            # Componentes reutilizáveis
