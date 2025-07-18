@@ -27,7 +27,7 @@ export default function PlayerControls() {
     mounted,
     isPlaying,
     volume,
-    currentPlaylistId,
+    currentVideo,
     displayMode,
     playlists,
     currentPlaylist,
@@ -176,7 +176,7 @@ export default function PlayerControls() {
           {/* Seleção de playlist */}
           <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
             <Select
-              value={currentPlaylistId}
+              value={currentVideo}
               onChange={handleSourceChange}
               sx={{
                 color: 'white',

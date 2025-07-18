@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import { usePlayer } from '../contexts/PlayerContext';
 
 const WelcomeModal = ({ open, onStart }) => {
-  const { isPlaying, togglePlayPause } = usePlayer();
+  const { isPlaying, startPlaying } = usePlayer();
   const [isClient, setIsClient] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
 
@@ -32,7 +32,7 @@ const WelcomeModal = ({ open, onStart }) => {
   const handleStart = () => {
     // Iniciar a reprodução da música
     if (!isPlaying) {
-      togglePlayPause();
+      startPlaying();
     }
     // Fechar o modal
     onStart();

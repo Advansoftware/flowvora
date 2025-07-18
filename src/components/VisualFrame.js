@@ -9,12 +9,14 @@ import PlayerControls from './PlayerControls';
 
 export default function VisualFrame() {
   const {
-    currentPlaylistId,
+    currentVideo,
     displayMode,
     volume,
     isPlaying,
     currentPlaylist,
     mounted,
+    onPlayerReady,
+    onPlayerStateChange,
   } = usePlayer();
 
   const [currentScene, setCurrentScene] = useState(0);
@@ -24,47 +26,50 @@ export default function VisualFrame() {
   const videoPlayerRef = useRef(null);
   const audioPlayerRef = useRef(null);
 
-  // Opções do YouTube player
+  // Opções do YouTube player - removendo opções que causam problemas
   const youtubeOpts = {
     height: '100%',
     width: '100%',
     playerVars: {
       autoplay: 1,
-      controls: 0,
+      controls: 0,      // Desabilitar controles do YouTube
       loop: 1,
-      playlist: currentPlaylistId,
-      rel: 0,
-      showinfo: 0,
-      fs: 0,
-      iv_load_policy: 3,
+      playlist: currentVideo,
+      rel: 0,           // Não mostrar vídeos relacionados
+      showinfo: 0,      // Não mostrar informações do vídeo
+      fs: 0,            // Desabilitar fullscreen
+      iv_load_policy: 3, // Desabilitar anotações
+      modestbranding: 1, // Remover logo do YouTube
+      disablekb: 1,     // Desabilitar controles do teclado
+      cc_load_policy: 0, // Desabilitar legendas
+      end: null,        // Não definir fim do vídeo para evitar sugestões
     },
   };
 
   // Eventos do YouTube player
-  const onReady = (event, isAudio = false) => {
+  const handlePlayerReady = (event, isAudio = false) => {
     const player = event.target;
     if (isAudio) {
       audioPlayerRef.current = player;
-      window.youtubeAudioPlayer = player;
     } else {
       videoPlayerRef.current = player;
-      window.youtubeVideoPlayer = player;
     }
     
-    // Configurar volume inicial
-    player.setVolume(volume);
-    player.playVideo();
+    onPlayerReady(player);
     console.log(`Player ${isAudio ? 'áudio' : 'vídeo'} carregado`);
   };
 
-  const onStateChange = (event) => {
-    // 1 = playing, 2 = paused, 0 = ended
-    const playerState = event.data;
-    console.log('Estado do player:', playerState);
+  const handleStateChange = (event) => {
+    onPlayerStateChange(event);
     
-    // Atualizar estado no contexto através do window
-    if (typeof window !== 'undefined' && window.updatePlayerState) {
-      window.updatePlayerState(playerState === 1);
+    // Quando o vídeo terminar, recarregar para evitar sugestões
+    if (event.data === 0) { // 0 = ended
+      setTimeout(() => {
+        const player = displayMode === 'video' ? videoPlayerRef.current : audioPlayerRef.current;
+        if (player) {
+          player.playVideo();
+        }
+      }, 1000);
     }
   };
 
@@ -89,15 +94,6 @@ export default function VisualFrame() {
     }
   }, [displayMode, mounted]);
 
-  // Expor funções de controle para o contexto
-  useEffect(() => {
-    if (mounted) {
-      // Adicionar referências dos players ao window para que o hook possa acessá-los
-      window.youtubeVideoPlayer = videoPlayerRef.current;
-      window.youtubeAudioPlayer = audioPlayerRef.current;
-    }
-  }, [mounted]);
-
   if (!mounted) return null;
 
   return (
@@ -120,20 +116,25 @@ export default function VisualFrame() {
           width: '100%',
           height: '100%',
           opacity: displayMode === 'video' ? 1 : 0,
-          pointerEvents: displayMode === 'video' ? 'auto' : 'none',
+          pointerEvents: 'none', // Tornar não clicável
           transition: 'opacity 0.5s ease',
           '& iframe': {
             width: '100%',
             height: '100%',
+            pointerEvents: 'none', // Garantir que o iframe não seja clicável
           },
         }}
       >
         <YouTube
-          videoId={currentPlaylistId}
+          videoId={currentVideo}
           opts={youtubeOpts}
-          onReady={(event) => onReady(event, false)}
-          onStateChange={onStateChange}
-          style={{ width: '100%', height: '100%' }}
+          onReady={(event) => handlePlayerReady(event, false)}
+          onStateChange={handleStateChange}
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            pointerEvents: 'none'
+          }}
         />
       </Box>
 
@@ -143,23 +144,34 @@ export default function VisualFrame() {
           position: 'absolute',
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
+          width: '1px',
+          height: '1px',
           opacity: 0,
           pointerEvents: 'none',
           visibility: displayMode === 'image' ? 'visible' : 'hidden',
+          overflow: 'hidden',
           '& iframe': {
-            width: '100%',
-            height: '100%',
+            width: '1px',
+            height: '1px',
           },
         }}
       >
         <YouTube
-          videoId={currentPlaylistId}
-          opts={youtubeOpts}
-          onReady={(event) => onReady(event, true)}
-          onStateChange={onStateChange}
-          style={{ width: '100%', height: '100%' }}
+          videoId={currentVideo}
+          opts={{
+            ...youtubeOpts,
+            height: '1',
+            width: '1',
+          }}
+          onReady={(event) => handlePlayerReady(event, true)}
+          onStateChange={handleStateChange}
+          style={{ 
+            width: '1px', 
+            height: '1px',
+            position: 'absolute',
+            top: '-9999px',
+            left: '-9999px',
+          }}
         />
       </Box>
 

@@ -67,25 +67,6 @@ function HomeContent() {
 
   const handleStartExperience = () => {
     setShowWelcome(false);
-    setVideoPlaying(true);
-    
-    // Aguardar um pouco para o modal fechar e então iniciar o vídeo
-    setTimeout(() => {
-      // Enviar comando para o VisualFrame iniciar o vídeo
-      const iframe = document.querySelector('#youtube-iframe');
-      if (iframe && iframe.contentWindow) {
-        try {
-          iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-        } catch (error) {
-          console.log('YouTube API não disponível ainda');
-        }
-      }
-      
-      // Também definir função global para o VisualFrame usar
-      if (typeof window !== 'undefined') {
-        window.flowvoraStartVideo = true;
-      }
-    }, 500);
   };
 
   if (!mounted) {
