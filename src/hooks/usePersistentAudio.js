@@ -39,7 +39,9 @@ export const usePersistentAudio = () => {
           setCurrentVideo(state.currentVideo || 'jfKfPfyJRdk'); // Video padrão
           setVolume(state.volume || 50);
           setIsMuted(state.isMuted || false);
-          setIsPlaying(state.isPlaying || false);
+          // Só restaurar o estado de playing se houve interação prévia
+          const userInteraction = localStorage.getItem('flowvora-user-interaction');
+          setIsPlaying(userInteraction ? (state.isPlaying || false) : false);
         } catch (error) {
           console.warn('Erro ao carregar estado do áudio:', error);
           setCurrentVideo('jfKfPfyJRdk'); // Fallback para vídeo padrão
@@ -123,14 +125,14 @@ export const usePersistentAudio = () => {
         player.seekTo(savedPosition, true);
       }
       
-      // Se estava tocando antes do reload, retomar reprodução
-      if (isPlaying) {
+      // Se estava tocando antes do reload E houve interação do usuário, retomar reprodução
+      if (isPlaying && hasUserInteracted) {
         setTimeout(() => {
           player.playVideo();
         }, 1000); // Delay para garantir que o player está totalmente carregado
       }
     }
-  }, [volume, isMuted, isPlaying, currentVideo, getVideoPosition]);
+  }, [volume, isMuted, isPlaying, currentVideo, hasUserInteracted, getVideoPosition]);
 
   // Controlar play/pause
   const togglePlayPause = useCallback(() => {

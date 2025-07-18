@@ -73,6 +73,14 @@ const Pomodoro = () => {
     setIsRunning(!isRunning);
   };
 
+  const startTimer = () => {
+    setIsRunning(true);
+  };
+
+  const pauseTimer = () => {
+    setIsRunning(false);
+  };
+
   const resetTimer = () => {
     setIsRunning(false);
     setTimeLeft(currentMode.duration);
@@ -89,6 +97,14 @@ const Pomodoro = () => {
     setTimeLeft(modes[newMode].duration);
     setIsRunning(false);
   };
+
+  // Expor funções globais para controle do Pomodoro pelas tarefas
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.flowvoraStartPomodoro = startTimer;
+      window.flowvoraPausePomodoro = pauseTimer;
+    }
+  }, []);
 
   if (!mounted) return null;
 

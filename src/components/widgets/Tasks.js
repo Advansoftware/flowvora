@@ -85,6 +85,9 @@ const Tasks = () => {
   };
 
   const startTask = (id) => {
+    const currentTask = tasks.find(task => task.id === id);
+    const isStarting = currentTask && currentTask.status !== 'in-progress';
+    
     setTasks(tasks.map(task => 
       task.id === id 
         ? { ...task, status: 'in-progress' }
@@ -92,6 +95,21 @@ const Tasks = () => {
           ? { ...task, status: 'pending' } // Para apenas uma tarefa ativa
           : task
     ));
+
+    // Controlar o Pomodoro quando iniciar/pausar tarefa
+    if (typeof window !== 'undefined') {
+      if (isStarting) {
+        // Iniciar tarefa - iniciar Pomodoro
+        if (window.flowvoraStartPomodoro) {
+          window.flowvoraStartPomodoro();
+        }
+      } else {
+        // Pausar tarefa - pausar Pomodoro
+        if (window.flowvoraPausePomodoro) {
+          window.flowvoraPausePomodoro();
+        }
+      }
+    }
   };
 
   const addPomodoro = useCallback((id) => {
@@ -101,6 +119,18 @@ const Tasks = () => {
             ...task, 
             pomodoros: task.pomodoros + 1,
             status: task.status === 'pending' ? 'in-progress' : task.status
+          }
+        : task
+    ));
+  }, [tasks]);
+
+  const removePomodoro = useCallback((id) => {
+    setTasks(tasks.map(task => 
+      task.id === id 
+        ? { 
+            ...task, 
+            pomodoros: Math.max(0, task.pomodoros - 1),
+            status: task.pomodoros <= 1 ? 'pending' : task.status
           }
         : task
     ));
@@ -159,7 +189,7 @@ const Tasks = () => {
   // Aplicar ordenação sempre que as tarefas mudarem
   const sortedTasks = getSortedTasks(tasks);
 
-  // Expor função para adicionar pomodoro à tarefa ativa
+  // Expor funções globais para controle das tarefas e pomodoro
   useEffect(() => {
     if (typeof window !== 'undefined') {
       window.flowvoraAddPomodoro = () => {
@@ -167,8 +197,14 @@ const Tasks = () => {
           addPomodoro(activeTask.id);
         }
       };
+
+      window.flowvoraRemovePomodoro = () => {
+        if (activeTask) {
+          removePomodoro(activeTask.id);
+        }
+      };
     }
-  }, [activeTask, addPomodoro]);
+  }, [activeTask, addPomodoro, removePomodoro]);
 
   if (!mounted) return null;
 

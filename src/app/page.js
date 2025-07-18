@@ -29,12 +29,12 @@ import { ADSENSE_CONFIG } from '../config/adsense';
 
 // Componente principal que utiliza o contexto
 function HomeContent() {
-  const { isPlaying, mounted: playerMounted, hasUserInteracted } = usePlayer();
+  const { isPlaying, mounted: playerMounted, hasUserInteracted, isReady, startPlaying } = usePlayer();
   const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [showMainContent, setShowMainContent] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true); // Sempre iniciar com modal
+  const [showMainContent, setShowMainContent] = useState(false); // Sempre iniciar sem conteúdo
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
@@ -49,41 +49,28 @@ function HomeContent() {
     return () => window.removeEventListener('resize', handleResize);
   }, [theme.breakpoints.values.lg]);
 
-  // Lógica do modal: mostrar apenas se não houve interação e não está tocando
+  // Lógica do modal: SEMPRE mostrar na primeira interação (início da sessão)
   useEffect(() => {
     if (mounted && playerMounted) {
-      // Modal só deve aparecer se:
-      // 1. Não houve interação do usuário nesta sessão
-      // 2. Não está tocando música
-      // 3. Aguardar um tempo para verificar se vai começar a tocar automaticamente
-      if (!hasUserInteracted && !isPlaying) {
-        const timer = setTimeout(() => {
-          // Verificar novamente após o delay se ainda não está tocando
-          if (!isPlaying) {
-            setShowWelcome(true);
-          } else {
-            // Se começou a tocar, mostrar conteúdo principal
-            setShowMainContent(true);
-          }
-        }, 1000); // Aguardar 1 segundo
-        
-        return () => clearTimeout(timer);
-      } else {
-        // Se houve interação ou está tocando, mostrar conteúdo principal
-        setShowWelcome(false);
-        setShowMainContent(true);
-      }
+      // Modal sempre aparece no início - só desaparece quando usuário clica "Entrar no Flow"
+      // showWelcome já inicia como true, então não precisamos fazer nada aqui
+      // O modal só será fechado pela função handleStartExperience
     }
-  }, [mounted, playerMounted, hasUserInteracted, isPlaying]);
+  }, [mounted, playerMounted]);
 
   const handleStartExperience = () => {
+    // Iniciar o player quando o usuário clicar em "Entrar no Flow"
+    if (isReady && !isPlaying) {
+      startPlaying();
+    }
     setShowWelcome(false);
     setShowMainContent(true);
   };
 
-  if (!mounted) {
+  if (!mounted || !playerMounted) {
     return (
       <Box
+        suppressHydrationWarning
         sx={{
           minHeight: '100vh',
           width: '100vw',
@@ -106,20 +93,27 @@ function HomeContent() {
     );
   }
 
-  // Se deve mostrar o modal, mostrar apenas ele
-  if (showWelcome) {
+  // Se deve mostrar o modal, mostrar apenas ele (mas com player invisível carregando)
+  if (showWelcome && mounted && playerMounted) {
     return (
-      <WelcomeModal 
-        open={true} 
-        onStart={handleStartExperience}
-      />
+      <>
+        <WelcomeModal 
+          open={true} 
+          onStart={handleStartExperience}
+        />
+        {/* Player invisível para carregar em background */}
+        <Box sx={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '1px', height: '1px', opacity: 0 }}>
+          <VisualFrame />
+        </Box>
+      </>
     );
   }
 
-  // Se não deve mostrar o conteúdo principal ainda, mostrar loading
-  if (!showMainContent) {
+  // Se não deve mostrar o conteúdo principal ainda, mostrar loading (não deveria acontecer mais)
+  if (!showMainContent && mounted && playerMounted) {
     return (
       <Box
+        suppressHydrationWarning
         sx={{
           minHeight: '100vh',
           width: '100vw',
@@ -261,7 +255,7 @@ function HomeContent() {
                   <Box 
                     sx={{ 
                       flex: 1,
-                      maxHeight: '60vh', // Altura máxima fixa baseada na viewport
+                      maxHeight: '45vh', // Altura máxima reduzida para evitar passar da tela em desktops pequenos
                       overflowY: 'auto',
                       overflowX: 'hidden',
                       '&::-webkit-scrollbar': {

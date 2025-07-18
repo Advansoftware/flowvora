@@ -13,6 +13,7 @@ import {
   PlayArrow,
   Pause,
   Add,
+  Remove,
 } from '@mui/icons-material';
 
 const ActiveTaskStatus = () => {
@@ -47,6 +48,12 @@ const ActiveTaskStatus = () => {
   const addPomodoroToActiveTask = () => {
     if (activeTask && typeof window !== 'undefined' && window.flowvoraAddPomodoro) {
       window.flowvoraAddPomodoro();
+    }
+  };
+
+  const removePomodoroFromActiveTask = () => {
+    if (activeTask && typeof window !== 'undefined' && window.flowvoraRemovePomodoro) {
+      window.flowvoraRemovePomodoro();
     }
   };
 
@@ -141,6 +148,33 @@ const ActiveTaskStatus = () => {
               }}
             />
             
+            {/* Botão remover pomodoro */}
+            <IconButton
+              onClick={removePomodoroFromActiveTask}
+              disabled={activeTask.pomodoros <= 0}
+              size="small"
+              sx={{
+                width: 28,
+                height: 28,
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                opacity: activeTask.pomodoros <= 0 ? 0.3 : 1,
+                '&:hover': {
+                  backgroundColor: activeTask.pomodoros > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.2)',
+                  transform: activeTask.pomodoros > 0 ? 'scale(1.05)' : 'none',
+                },
+                '&:disabled': {
+                  color: 'rgba(239, 68, 68, 0.3)',
+                },
+                transition: 'all 0.2s ease',
+              }}
+              title="Remover Pomodoro"
+            >
+              <Remove sx={{ fontSize: '1rem' }} />
+            </IconButton>
+            
+            {/* Botão adicionar pomodoro */}
             <IconButton
               onClick={addPomodoroToActiveTask}
               size="small"

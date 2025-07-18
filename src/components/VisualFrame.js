@@ -56,7 +56,6 @@ export default function VisualFrame() {
     }
     
     onPlayerReady(player);
-    console.log(`Player ${isAudio ? 'áudio' : 'vídeo'} carregado`);
   };
 
   const handleStateChange = (event) => {
