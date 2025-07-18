@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Container, 
-  Grid, 
+  Grid,
   Stack,
   useTheme,
   Fade,
@@ -247,10 +247,10 @@ export default function Home() {
               </Box>
             </Stack>
           ) : (
-            // Layout Desktop - Grid otimizado
+            // Layout Desktop - Grid otimizado (layout original)
             <Grid container spacing={3} sx={{ height: '100%', width: '100%' }}>
               {/* Sidebar esquerda com widgets - mais estreita */}
-              <Grid item xs={12} lg={3} xl={2.5}>
+              <Grid size={{ xs: 12, lg: 3, xl: 2.5 }}>
                 <Stack
                   spacing={2}
                   sx={{
@@ -285,30 +285,11 @@ export default function Home() {
                   >
                     <Tasks />
                   </Box>
-
-                  {/* AdSense sutil na sidebar - apenas desktop */}
-                  <Box sx={{ flexShrink: 0, display: { xs: 'none', lg: 'block' } }}>
-                    <AdSenseComponent
-                      adSlot={ADSENSE_CONFIG.SLOTS.SIDEBAR}
-                      adClient={ADSENSE_CONFIG.CLIENT_ID}
-                      size="sidebar"
-                      style={{
-                        container: {
-                          background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.7) 0%, rgba(20, 20, 40, 0.7) 100%)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: 2,
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
-                          maxHeight: '200px',
-                          overflow: 'hidden',
-                        }
-                      }}
-                    />
-                  </Box>
                 </Stack>
               </Grid>
 
-              {/* Área central - Quadro visual expandido e centralizado */}
-              <Grid item xs={12} lg={9} xl={9.5}>
+              {/* Área central - Player */}
+              <Grid size={{ xs: 12, lg: 6, xl: 7 }}>
                 <Box
                   sx={{
                     height: '100%',
@@ -346,6 +327,35 @@ export default function Home() {
                       <VisualFrame ref={visualFrameRef} />
                     </Box>
                   </motion.div>
+                </Box>
+              </Grid>
+
+              {/* AdSense à direita do player */}
+              <Grid size={{ xs: 12, lg: 3, xl: 2.5 }} sx={{ display: { xs: 'none', lg: 'block' } }}>
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pl: 2,
+                  }}
+                >
+                  <AdSenseComponent
+                    adSlot={ADSENSE_CONFIG.SLOTS.SIDEBAR}
+                    adClient={ADSENSE_CONFIG.CLIENT_ID}
+                    size="sidebar"
+                    style={{
+                      container: {
+                        background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.7) 0%, rgba(20, 20, 40, 0.7) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        maxHeight: '400px',
+                        overflow: 'hidden',
+                      }
+                    }}
+                  />
                 </Box>
               </Grid>
             </Grid>
