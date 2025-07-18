@@ -130,6 +130,35 @@ const Tasks = () => {
   const totalCount = tasks.length;
   const activeTask = tasks.find(task => task.status === 'in-progress' && !task.completed);
 
+  // Função para ordenar tarefas: em progresso -> pendentes -> concluídas
+  const getSortedTasks = useCallback((tasks) => {
+    return [...tasks].sort((a, b) => {
+      // Primeiro critério: status
+      const statusOrder = {
+        'in-progress': 0,
+        'pending': 1,
+        'completed': 2
+      };
+      
+      // Se uma está completed e outra não, completed vai para o final
+      if (a.completed !== b.completed) {
+        return a.completed ? 1 : -1;
+      }
+      
+      // Se ambas não estão completed, ordenar por status
+      if (!a.completed && !b.completed) {
+        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+        if (statusDiff !== 0) return statusDiff;
+      }
+      
+      // Segundo critério: ordem de criação (mais recentes primeiro para pendentes)
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  }, []);
+
+  // Aplicar ordenação sempre que as tarefas mudarem
+  const sortedTasks = getSortedTasks(tasks);
+
   // Expor função para adicionar pomodoro à tarefa ativa
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -266,7 +295,7 @@ const Tasks = () => {
               </Box>
             ) : (
               <List sx={{ p: 0 }}>
-                {tasks.map((task) => (
+                {sortedTasks.map((task) => (
                   <ListItem
                     key={task.id}
                     sx={{

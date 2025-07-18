@@ -206,7 +206,8 @@ function HomeContent() {
                 <Box
                   sx={{
                     width: '100%',
-                    height: { xs: '280px', sm: '350px' },
+                    height: { xs: '50vh', sm: '55vh' }, // Altura baseada na viewport no mobile
+                    maxHeight: { xs: '400px', sm: '500px' }, // Altura máxima no mobile
                     mb: 2,
                   }}
                 >
@@ -256,10 +257,11 @@ function HomeContent() {
                     <Pomodoro />
                   </Box>
                   
-                  {/* Tasks - com scroll */}
+                  {/* Tasks - com scroll e altura limitada */}
                   <Box 
                     sx={{ 
                       flex: 1,
+                      maxHeight: '60vh', // Altura máxima fixa baseada na viewport
                       overflowY: 'auto',
                       overflowX: 'hidden',
                       '&::-webkit-scrollbar': {
@@ -290,7 +292,8 @@ function HomeContent() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     position: 'relative',
-                    minHeight: '600px',
+                    minHeight: '70vh', // Altura mínima baseada na viewport
+                    maxHeight: '85vh', // Altura máxima baseada na viewport
                   }}
                 >
                   <motion.div
@@ -299,11 +302,11 @@ function HomeContent() {
                     transition={{ duration: 1, delay: 0.3 }}
                     style={{ 
                       width: '95%',
-                      height: '90%',
+                      height: '95%',
                       minWidth: '600px',
                       minHeight: '400px',
                       maxWidth: '1200px',
-                      maxHeight: '700px',
+                      maxHeight: '600px', // Altura máxima fixa
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
