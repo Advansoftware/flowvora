@@ -61,14 +61,19 @@ const ActiveTaskStatus = () => {
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,
-          background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.95) 0%, rgba(255, 193, 7, 0.95) 100%)',
+          background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.85) 0%, rgba(20, 20, 40, 0.85) 100%)',
           backdropFilter: 'blur(20px)',
           borderRadius: 3,
           padding: '12px 20px',
-          border: '1px solid rgba(255, 152, 0, 0.3)',
-          boxShadow: '0 8px 32px rgba(255, 152, 0, 0.4)',
+          border: '1px solid rgba(226, 232, 240, 0.2)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           minWidth: '300px',
           maxWidth: '500px',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateX(-50%) translateY(-2px)',
+            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+          },
         }}
       >
         <Stack direction="row" alignItems="center" spacing={2}>
@@ -78,17 +83,17 @@ const ActiveTaskStatus = () => {
               width: 12,
               height: 12,
               borderRadius: '50%',
-              backgroundColor: '#4caf50',
+              backgroundColor: '#10b981',
               animation: 'pulse 2s infinite',
               '@keyframes pulse': {
                 '0%': {
-                  boxShadow: '0 0 0 0 rgba(76, 175, 80, 0.7)',
+                  boxShadow: '0 0 0 0 rgba(16, 185, 129, 0.7)',
                 },
                 '70%': {
-                  boxShadow: '0 0 0 6px rgba(76, 175, 80, 0)',
+                  boxShadow: '0 0 0 6px rgba(16, 185, 129, 0)',
                 },
                 '100%': {
-                  boxShadow: '0 0 0 0 rgba(76, 175, 80, 0)',
+                  boxShadow: '0 0 0 0 rgba(16, 185, 129, 0)',
                 },
               },
             }}
@@ -99,7 +104,7 @@ const ActiveTaskStatus = () => {
             <Typography
               variant="body2"
               sx={{
-                color: 'rgba(0, 0, 0, 0.8)',
+                color: 'rgba(226, 232, 240, 0.9)',
                 fontWeight: 600,
                 fontSize: '0.9rem',
                 lineHeight: 1.2,
@@ -113,11 +118,11 @@ const ActiveTaskStatus = () => {
             <Typography
               variant="caption"
               sx={{
-                color: 'rgba(0, 0, 0, 0.6)',
+                color: 'rgba(226, 232, 240, 0.6)',
                 fontSize: '0.75rem',
               }}
             >
-              Tarefa em andamento
+              Foco ativo
             </Typography>
           </Box>
 
@@ -130,9 +135,9 @@ const ActiveTaskStatus = () => {
                 height: '24px',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                backgroundColor: 'rgba(255, 99, 71, 0.2)',
-                color: '#d32f2f',
-                border: '1px solid rgba(255, 99, 71, 0.4)',
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                color: '#ef4444',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
               }}
             />
             
@@ -142,12 +147,14 @@ const ActiveTaskStatus = () => {
               sx={{
                 width: 28,
                 height: 28,
-                backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                color: '#2e7d32',
-                border: '1px solid rgba(76, 175, 80, 0.4)',
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                color: '#10b981',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
                 '&:hover': {
-                  backgroundColor: 'rgba(76, 175, 80, 0.3)',
+                  backgroundColor: 'rgba(16, 185, 129, 0.3)',
+                  transform: 'scale(1.05)',
                 },
+                transition: 'all 0.2s ease',
               }}
               title="Adicionar Pomodoro"
             >

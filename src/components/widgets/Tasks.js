@@ -270,7 +270,7 @@ const Tasks = () => {
                   <ListItem
                     key={task.id}
                     sx={{
-                      px: 0,
+                      px: 1,
                       py: 1,
                       borderRadius: 2,
                       mb: 1,
@@ -292,12 +292,9 @@ const Tasks = () => {
                             ? 'rgba(245, 158, 11, 0.15)'
                             : 'rgba(226, 232, 240, 0.1)',
                       },
-                      flexDirection: 'column',
-                      alignItems: 'stretch',
-                      gap: 1,
                     }}
                   >
-                    {/* Linha principal da tarefa */}
+                    {/* Linha única com todos os elementos */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                       <Checkbox
                         checked={task.completed}
@@ -307,52 +304,41 @@ const Tasks = () => {
                         checkedIcon={getStatusIcon(task.status, true)}
                         sx={{
                           color: getStatusColor(task.status),
-                          padding: '2px',
+                          padding: '4px',
                           '&.Mui-checked': {
                             color: '#10b981',
                           },
                         }}
                       />
                       
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                      {/* Texto da tarefa com truncate */}
+                      <Tooltip title={task.text} placement="top">
                         <Typography
                           variant="body2"
                           sx={{
+                            flex: 1,
                             color: task.completed 
                               ? 'rgba(226, 232, 240, 0.6)' 
                               : 'rgba(226, 232, 240, 0.9)',
                             textDecoration: task.completed ? 'line-through' : 'none',
                             fontSize: '0.85rem',
                             lineHeight: 1.3,
-                            wordBreak: 'break-word',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            minWidth: 0,
                           }}
                         >
                           {task.text}
                         </Typography>
-                      </Box>
+                      </Tooltip>
 
-                      <IconButton
-                        onClick={() => deleteTask(task.id)}
-                        size="small"
-                        sx={{
-                          color: 'rgba(226, 232, 240, 0.4)',
-                          padding: '4px',
-                          '&:hover': {
-                            color: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                          },
-                        }}
-                      >
-                        <Delete sx={{ fontSize: '0.9rem' }} />
-                      </IconButton>
-                    </Box>
-
-                    {/* Linha de controles e status */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pl: 4 }}>
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      {/* Controles à direita */}
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        {/* Contador de pomodoros */}
                         {task.pomodoros > 0 && (
                           <Chip
-                            label={`🍅 ${task.pomodoros}`}
+                            label={`🍅${task.pomodoros}`}
                             size="small"
                             sx={{
                               height: '20px',
@@ -360,50 +346,54 @@ const Tasks = () => {
                               backgroundColor: 'rgba(239, 68, 68, 0.2)',
                               color: '#ef4444',
                               border: '1px solid rgba(239, 68, 68, 0.3)',
+                              minWidth: 'auto',
                             }}
                           />
                         )}
                         
-                        {task.status === 'in-progress' && !task.completed && (
-                          <Chip
-                            label="Em andamento"
-                            size="small"
-                            icon={<Timer sx={{ fontSize: '0.8rem' }} />}
-                            sx={{
-                              height: '20px',
-                              fontSize: '0.7rem',
-                              backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                              color: '#f59e0b',
-                              border: '1px solid rgba(245, 158, 11, 0.3)',
-                            }}
-                          />
-                        )}
-                      </Stack>
-
-                      {!task.completed && (
-                        <Tooltip title={task.status === 'in-progress' ? 'Pausar tarefa' : 'Iniciar tarefa'}>
-                          <IconButton
-                            onClick={() => startTask(task.id)}
-                            size="small"
-                            sx={{
-                              color: task.status === 'in-progress' ? '#f59e0b' : '#10b981',
-                              backgroundColor: task.status === 'in-progress' 
-                                ? 'rgba(245, 158, 11, 0.1)' 
-                                : 'rgba(16, 185, 129, 0.1)',
-                              border: `1px solid ${task.status === 'in-progress' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                              width: 28,
-                              height: 28,
-                              '&:hover': {
+                        {/* Botão iniciar/pausar */}
+                        {!task.completed && (
+                          <Tooltip title={task.status === 'in-progress' ? 'Pausar tarefa' : 'Iniciar tarefa'}>
+                            <IconButton
+                              onClick={() => startTask(task.id)}
+                              size="small"
+                              sx={{
+                                color: task.status === 'in-progress' ? '#f59e0b' : '#10b981',
                                 backgroundColor: task.status === 'in-progress' 
-                                  ? 'rgba(245, 158, 11, 0.2)' 
-                                  : 'rgba(16, 185, 129, 0.2)',
-                              },
-                            }}
-                          >
-                            {task.status === 'in-progress' ? <Pause sx={{ fontSize: '1rem' }} /> : <PlayArrow sx={{ fontSize: '1rem' }} />}
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                                  ? 'rgba(245, 158, 11, 0.1)' 
+                                  : 'rgba(16, 185, 129, 0.1)',
+                                border: `1px solid ${task.status === 'in-progress' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                                width: 24,
+                                height: 24,
+                                '&:hover': {
+                                  backgroundColor: task.status === 'in-progress' 
+                                    ? 'rgba(245, 158, 11, 0.2)' 
+                                    : 'rgba(16, 185, 129, 0.2)',
+                                },
+                              }}
+                            >
+                              {task.status === 'in-progress' ? <Pause sx={{ fontSize: '0.8rem' }} /> : <PlayArrow sx={{ fontSize: '0.8rem' }} />}
+                            </IconButton>
+                          </Tooltip>
+                        )}
+
+                        {/* Botão deletar */}
+                        <IconButton
+                          onClick={() => deleteTask(task.id)}
+                          size="small"
+                          sx={{
+                            color: 'rgba(226, 232, 240, 0.4)',
+                            width: 24,
+                            height: 24,
+                            '&:hover': {
+                              color: '#ef4444',
+                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: '0.8rem' }} />
+                        </IconButton>
+                      </Stack>
                     </Box>
                   </ListItem>
                 ))}
