@@ -67,6 +67,24 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
     setCurrentVideo(videoId);
   }, [showVideo, videoId]);
 
+  // Configurar volume inicial quando o vídeo carrega
+  useEffect(() => {
+    if (displayMode === 'video' && currentVideo) {
+      const timer = setTimeout(() => {
+        const iframe = document.querySelector('#youtube-iframe');
+        if (iframe && iframe.contentWindow) {
+          try {
+            iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${volume}"}`, '*');
+          } catch (error) {
+            console.log('YouTube API não disponível ainda');
+          }
+        }
+      }, 2000); // Aguarda 2 segundos para o iframe carregar
+
+      return () => clearTimeout(timer);
+    }
+  }, [displayMode, currentVideo, volume]);
+
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
     
@@ -131,7 +149,7 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
   };
 
   const getYouTubeEmbedUrl = (id) => {
-    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`;
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=0&controls=0&loop=1&playlist=${id}&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`;
   };
 
   if (!mounted) return null;
