@@ -21,6 +21,8 @@ import VisualFrame from '../components/VisualFrame';
 import RainEffect from '../components/RainEffect';
 import ActiveTaskStatus from '../components/ActiveTaskStatus';
 import WelcomeModal from '../components/WelcomeModal';
+import AdSenseComponent from '../components/AdSenseComponent';
+import { ADSENSE_CONFIG } from '../config/adsense';
 
 export default function Home() {
   const theme = useTheme();
@@ -223,6 +225,26 @@ export default function Home() {
               {/* Widgets empilhados verticalmente */}
               <Pomodoro />
               <Tasks />
+              
+              {/* AdSense discreto no mobile */}
+              <Box sx={{ flexShrink: 0, display: { lg: 'none' } }}>
+                <AdSenseComponent
+                  adSlot={ADSENSE_CONFIG.SLOTS.MOBILE_BANNER}
+                  adClient={ADSENSE_CONFIG.CLIENT_ID}
+                  size="responsive"
+                  style={{
+                    container: {
+                      background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.6) 0%, rgba(20, 20, 40, 0.6) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: 2,
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      maxHeight: '120px',
+                      overflow: 'hidden',
+                      marginTop: 2,
+                    }
+                  }}
+                />
+              </Box>
             </Stack>
           ) : (
             // Layout Desktop - Grid otimizado
@@ -262,6 +284,25 @@ export default function Home() {
                     }}
                   >
                     <Tasks />
+                  </Box>
+
+                  {/* AdSense sutil na sidebar - apenas desktop */}
+                  <Box sx={{ flexShrink: 0, display: { xs: 'none', lg: 'block' } }}>
+                    <AdSenseComponent
+                      adSlot={ADSENSE_CONFIG.SLOTS.SIDEBAR}
+                      adClient={ADSENSE_CONFIG.CLIENT_ID}
+                      size="sidebar"
+                      style={{
+                        container: {
+                          background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.7) 0%, rgba(20, 20, 40, 0.7) 100%)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: 2,
+                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          maxHeight: '200px',
+                          overflow: 'hidden',
+                        }
+                      }}
+                    />
                   </Box>
                 </Stack>
               </Grid>
@@ -318,69 +359,65 @@ export default function Home() {
                 bottom: { xs: 16, lg: 24 },
                 right: { xs: 16, lg: 24 },
                 zIndex: 10,
-                display: 'flex',
-                gap: 2,
-                alignItems: 'center',
+                backgroundColor: 'rgba(30, 30, 60, 0.9)',
+                backdropFilter: 'blur(20px)',
+                padding: '8px 16px',
+                borderRadius: 3,
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
               }}
             >
-              {/* Botão para mostrar welcome novamente */}
-              {!showWelcome && (
-                <Box
-                  onClick={() => setShowWelcome(true)}
-                  sx={{
-                    backgroundColor: 'rgba(30, 30, 60, 0.9)',
-                    backdropFilter: 'blur(20px)',
-                    padding: '6px 12px',
-                    borderRadius: 2,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      backgroundColor: 'rgba(30, 30, 60, 1)',
-                      transform: 'translateY(-2px)',
-                    },
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      fontSize: '0.7rem',
-                      fontWeight: 500,
-                    }}
-                  >
-                    🏠 Início
-                  </Typography>
-                </Box>
-              )}
-              
               <Box
+                component="span"
                 sx={{
-                  backgroundColor: 'rgba(30, 30, 60, 0.9)',
-                  backdropFilter: 'blur(20px)',
-                  padding: '8px 16px',
-                  borderRadius: 3,
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
                 }}
               >
-                <Box
-                  component="span"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                  }}
-                >
-                  🧘‍♀️ Modo Foco Lo-fi
-                </Box>
+                🧘‍♀️ Modo Foco Lo-fi
               </Box>
             </Box>
           </Fade>
+
+          {/* Banner AdSense sutil no fundo (apenas quando modal não estiver aberto) */}
+          {!showWelcome && (
+            <Fade in timeout={2000}>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 1,
+                  width: '100%',
+                  maxWidth: '728px',
+                  display: { xs: 'none', md: 'block' },
+                }}
+              >
+                <AdSenseComponent
+                  adSlot={ADSENSE_CONFIG.SLOTS.BOTTOM_BANNER}
+                  adClient={ADSENSE_CONFIG.CLIENT_ID}
+                  size="banner"
+                  style={{
+                    container: {
+                      background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.4) 0%, rgba(20, 20, 40, 0.4) 100%)',
+                      backdropFilter: 'blur(15px)',
+                      borderRadius: '12px 12px 0 0',
+                      border: '1px solid rgba(255, 255, 255, 0.03)',
+                      borderBottom: 'none',
+                      padding: '8px',
+                      opacity: 0.7,
+                      transition: 'opacity 0.3s ease',
+                    }
+                  }}
+                />
+              </Box>
+            </Fade>
+          )}
         </Container>
 
         {/* Overlay de fundo para criar profundidade */}
