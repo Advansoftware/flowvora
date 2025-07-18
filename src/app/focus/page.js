@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Box, 
   Container, 
@@ -19,11 +19,14 @@ import Tasks from '../../components/widgets/Tasks';
 import VisualFrame from '../../components/VisualFrame';
 import RainEffect from '../../components/RainEffect';
 import ActiveTaskStatus from '../../components/ActiveTaskStatus';
+import WelcomeModal from '../../components/WelcomeModal';
 
 export default function FocusPage() {
   const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const visualFrameRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
@@ -36,6 +39,28 @@ export default function FocusPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [theme.breakpoints.values.lg]);
+
+  const handleStartExperience = () => {
+    setShowWelcome(false);
+    
+    // Aguardar um pouco para o modal fechar e então iniciar o vídeo
+    setTimeout(() => {
+      // Enviar comando para o VisualFrame iniciar o vídeo
+      const iframe = document.querySelector('#youtube-iframe');
+      if (iframe && iframe.contentWindow) {
+        try {
+          iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+        } catch (error) {
+          console.log('YouTube API não disponível ainda');
+        }
+      }
+      
+      // Também definir função global para o VisualFrame usar
+      if (typeof window !== 'undefined') {
+        window.flowvoraStartVideo = true;
+      }
+    }, 500);
+  };
 
   if (!mounted) {
     return (
@@ -63,16 +88,23 @@ export default function FocusPage() {
   }
 
   return (
-    <Box
-      suppressHydrationWarning
-      sx={{
-        minHeight: '100vh',
-        width: '100vw',
-        overflow: 'hidden',
-        position: 'relative',
-        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-      }}
-    >
+    <>
+      {/* Modal de boas-vindas */}
+      <WelcomeModal 
+        open={showWelcome} 
+        onStart={handleStartExperience}
+      />
+
+      <Box
+        suppressHydrationWarning
+        sx={{
+          minHeight: '100vh',
+          width: '100vw',
+          overflow: 'hidden',
+          position: 'relative',
+          background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+        }}
+      >
       {/* Status da tarefa ativa */}
       <ActiveTaskStatus />
 
@@ -215,7 +247,7 @@ export default function FocusPage() {
                       position: 'relative',
                     }}
                   >
-                    <VisualFrame />
+                    <VisualFrame ref={visualFrameRef} />
                   </Box>
                 </motion.div>
               </Box>
@@ -270,5 +302,6 @@ export default function FocusPage() {
         }}
       />
     </Box>
+    </>
   );
 }

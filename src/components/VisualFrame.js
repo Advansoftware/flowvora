@@ -75,6 +75,13 @@ export default function VisualFrame({ showVideo = true, videoId = 'jfKfPfyJRdk' 
       if (iframe && iframe.contentWindow) {
         try {
           iframe.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":"${volume}"}`, '*');
+          
+          // Verificar se deve iniciar automaticamente
+          if (typeof window !== 'undefined' && window.flowvoraStartVideo) {
+            iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+            setIsPlaying(true);
+            window.flowvoraStartVideo = false; // Reset flag
+          }
         } catch (error) {
           console.log('YouTube API não disponível ainda');
         }
