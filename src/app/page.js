@@ -8,6 +8,7 @@ import {
   Stack,
   useTheme,
   Fade,
+  Typography,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 
@@ -26,6 +27,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [videoPlaying, setVideoPlaying] = useState(false);
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
@@ -40,8 +42,61 @@ export default function Home() {
     return () => window.removeEventListener('resize', handleResize);
   }, [theme.breakpoints.values.lg]);
 
+  // Verificar se o vídeo já está tocando
+  useEffect(() => {
+    const checkVideoPlaying = () => {
+      const iframe = document.querySelector('#youtube-iframe');
+      if (iframe && iframe.contentWindow) {
+        try {
+          // Solicitar estado do player
+          iframe.contentWindow.postMessage('{"event":"command","func":"getPlayerState","args":""}', '*');
+        } catch (error) {
+          console.log('YouTube API não disponível ainda');
+        }
+      }
+    };
+
+    // Escutar mensagens do YouTube
+    const handleMessage = (event) => {
+      if (event.origin !== 'https://www.youtube.com') return;
+      
+      try {
+        const data = JSON.parse(event.data);
+        // Se o player state for 1 (playing), esconder o modal
+        if (data.info && data.info.playerState === 1) {
+          setVideoPlaying(true);
+          setShowWelcome(false);
+        }
+        // Se o player state for diferente de 1 (pausado, parado, etc), mostrar o modal
+        else if (data.info && data.info.playerState !== 1) {
+          setVideoPlaying(false);
+          setShowWelcome(true);
+        }
+      } catch (e) {
+        // Ignora erros de parsing
+      }
+    };
+
+    if (mounted) {
+      window.addEventListener('message', handleMessage);
+      
+      // Verificar após um delay para dar tempo do iframe carregar
+      const timer = setTimeout(checkVideoPlaying, 2000);
+      
+      // Verificar periodicamente se o vídeo ainda está tocando
+      const interval = setInterval(checkVideoPlaying, 5000);
+      
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        clearTimeout(timer);
+        clearInterval(interval);
+      };
+    }
+  }, [mounted]);
+
   const handleStartExperience = () => {
     setShowWelcome(false);
+    setVideoPlaying(true);
     
     // Aguardar um pouco para o modal fechar e então iniciar o vídeo
     setTimeout(() => {
@@ -263,26 +318,66 @@ export default function Home() {
                 bottom: { xs: 16, lg: 24 },
                 right: { xs: 16, lg: 24 },
                 zIndex: 10,
-                backgroundColor: 'rgba(30, 30, 60, 0.9)',
-                backdropFilter: 'blur(20px)',
-                padding: '8px 16px',
-                borderRadius: 3,
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                gap: 2,
+                alignItems: 'center',
               }}
             >
+              {/* Botão para mostrar welcome novamente */}
+              {!showWelcome && (
+                <Box
+                  onClick={() => setShowWelcome(true)}
+                  sx={{
+                    backgroundColor: 'rgba(30, 30, 60, 0.9)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '6px 12px',
+                    borderRadius: 2,
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      backgroundColor: 'rgba(30, 30, 60, 1)',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontSize: '0.7rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    🏠 Início
+                  </Typography>
+                </Box>
+              )}
+              
               <Box
-                component="span"
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
+                  backgroundColor: 'rgba(30, 30, 60, 0.9)',
+                  backdropFilter: 'blur(20px)',
+                  padding: '8px 16px',
+                  borderRadius: 3,
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                 }}
               >
-                🧘‍♀️ Modo Foco Lo-fi
+                <Box
+                  component="span"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  🧘‍♀️ Modo Foco Lo-fi
+                </Box>
               </Box>
             </Box>
           </Fade>
