@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -29,11 +29,11 @@ const Pomodoro = () => {
     setMounted(true);
   }, []);
   
-  const modes = {
+  const modes = useMemo(() => ({
     focus: { duration: 25 * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
     shortBreak: { duration: 5 * 60, label: 'Pausa', emoji: '☕', color: '#4caf50' },
     longBreak: { duration: 15 * 60, label: 'Descanso', emoji: '🌟', color: '#2196f3' },
-  };
+  }), []);
 
   const currentMode = modes[mode];
   const totalTime = currentMode.duration;

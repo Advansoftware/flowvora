@@ -52,7 +52,7 @@ const QuoteRotator = () => {
               maxWidth: '250px',
             }}
           >
-            "{currentQuote}"
+            &quot;{currentQuote}&quot;
           </Typography>
         </motion.div>
       </AnimatePresence>
