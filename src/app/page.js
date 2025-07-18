@@ -29,11 +29,12 @@ import { ADSENSE_CONFIG } from '../config/adsense';
 
 // Componente principal que utiliza o contexto
 function HomeContent() {
-  const { isPlaying, mounted: playerMounted } = usePlayer();
+  const { isPlaying, mounted: playerMounted, hasUserInteracted } = usePlayer();
   const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false); // Começar como false
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [showMainContent, setShowMainContent] = useState(false);
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
@@ -48,25 +49,36 @@ function HomeContent() {
     return () => window.removeEventListener('resize', handleResize);
   }, [theme.breakpoints.values.lg]);
 
-  // Mostrar modal apenas se não estiver tocando música
+  // Lógica do modal: mostrar apenas se não houve interação e não está tocando
   useEffect(() => {
     if (mounted && playerMounted) {
-      // Se não estiver tocando, mostrar modal após um delay
-      if (!isPlaying) {
+      // Modal só deve aparecer se:
+      // 1. Não houve interação do usuário nesta sessão
+      // 2. Não está tocando música
+      // 3. Aguardar um tempo para verificar se vai começar a tocar automaticamente
+      if (!hasUserInteracted && !isPlaying) {
         const timer = setTimeout(() => {
-          setShowWelcome(true);
-        }, 2000); // Aguardar 2 segundos para verificar se a música vai começar
+          // Verificar novamente após o delay se ainda não está tocando
+          if (!isPlaying) {
+            setShowWelcome(true);
+          } else {
+            // Se começou a tocar, mostrar conteúdo principal
+            setShowMainContent(true);
+          }
+        }, 1000); // Aguardar 1 segundo
         
         return () => clearTimeout(timer);
       } else {
-        // Se estiver tocando, esconder modal
+        // Se houve interação ou está tocando, mostrar conteúdo principal
         setShowWelcome(false);
+        setShowMainContent(true);
       }
     }
-  }, [mounted, playerMounted, isPlaying]);
+  }, [mounted, playerMounted, hasUserInteracted, isPlaying]);
 
   const handleStartExperience = () => {
     setShowWelcome(false);
+    setShowMainContent(true);
   };
 
   if (!mounted) {
@@ -94,14 +106,44 @@ function HomeContent() {
     );
   }
 
-  return (
-    <>
-      {/* Modal de boas-vindas */}
+  // Se deve mostrar o modal, mostrar apenas ele
+  if (showWelcome) {
+    return (
       <WelcomeModal 
-        open={showWelcome} 
+        open={true} 
         onStart={handleStartExperience}
       />
+    );
+  }
 
+  // Se não deve mostrar o conteúdo principal ainda, mostrar loading
+  if (!showMainContent) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          width: '100vw',
+          background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Box
+          sx={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '1.1rem',
+            fontWeight: 500,
+          }}
+        >
+          🧘‍♀️ Preparando ambiente...
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <>
       <Box
         suppressHydrationWarning
         sx={{
@@ -343,40 +385,38 @@ function HomeContent() {
             </Box>
           </Fade>
 
-          {/* Banner AdSense sutil no fundo (apenas quando modal não estiver aberto) */}
-          {!showWelcome && (
-            <Fade in timeout={2000}>
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 80, // Muito mais distante do fundo
-                  right: 20, // Posicionado à direita, fora da área central
-                  zIndex: 1,
-                  width: '300px', // Largura fixa pequena
-                  display: { xs: 'none', xl: 'block' }, // Só em telas muito grandes
+          {/* Banner AdSense sutil no fundo */}
+          <Fade in timeout={2000}>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 80, // Muito mais distante do fundo
+                right: 20, // Posicionado à direita, fora da área central
+                zIndex: 1,
+                width: '300px', // Largura fixa pequena
+                display: { xs: 'none', xl: 'block' }, // Só em telas muito grandes
+              }}
+            >
+              <AdSenseComponent
+                adSlot={ADSENSE_CONFIG.SLOTS.BOTTOM_BANNER}
+                adClient={ADSENSE_CONFIG.CLIENT_ID}
+                size="compact-banner" // Usando tamanho compacto
+                style={{
+                  container: {
+                    background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.2) 0%, rgba(20, 20, 40, 0.2) 100%)', // Ainda mais transparente
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255, 255, 255, 0.01)',
+                    padding: '4px',
+                    opacity: 0.4, // Muito sutil
+                    transition: 'opacity 0.3s ease',
+                    maxHeight: '50px', // Altura muito restrita
+                    overflow: 'hidden',
+                  }
                 }}
-              >
-                <AdSenseComponent
-                  adSlot={ADSENSE_CONFIG.SLOTS.BOTTOM_BANNER}
-                  adClient={ADSENSE_CONFIG.CLIENT_ID}
-                  size="compact-banner" // Usando tamanho compacto
-                  style={{
-                    container: {
-                      background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.2) 0%, rgba(20, 20, 40, 0.2) 100%)', // Ainda mais transparente
-                      backdropFilter: 'blur(10px)',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(255, 255, 255, 0.01)',
-                      padding: '4px',
-                      opacity: 0.4, // Muito sutil
-                      transition: 'opacity 0.3s ease',
-                      maxHeight: '50px', // Altura muito restrita
-                      overflow: 'hidden',
-                    }
-                  }}
-                />
-              </Box>
-            </Fade>
-          )}
+              />
+            </Box>
+          </Fade>
         </Container>
 
         {/* Overlay de fundo para criar profundidade */}

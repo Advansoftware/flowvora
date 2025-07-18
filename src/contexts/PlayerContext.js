@@ -14,11 +14,13 @@ export function PlayerProvider({ children }) {
     volume,
     isMuted,
     isReady,
+    hasUserInteracted,
     togglePlayPause,
     changeVideo,
     changeVolume,
     toggleMute,
     startPlaying,
+    markUserInteraction,
     onPlayerReady,
     onPlayerStateChange,
     playerRef
@@ -56,6 +58,7 @@ export function PlayerProvider({ children }) {
   const changePlaylist = (playlistId) => {
     const newPlaylist = playlists.find(p => p.id === playlistId);
     if (newPlaylist) {
+      markUserInteraction(); // Marcar interação ao trocar playlist
       changeVideo(playlistId);
       
       // Se for stream, forçar modo imagem
@@ -68,6 +71,7 @@ export function PlayerProvider({ children }) {
 
   const changeDisplayMode = (mode) => {
     if (mode && (mode === 'image' || (mode === 'video' && canShowVideo))) {
+      markUserInteraction(); // Marcar interação ao trocar modo
       setDisplayMode(mode);
       savePreference('display-mode', mode);
     }
@@ -80,6 +84,7 @@ export function PlayerProvider({ children }) {
     volume,
     isMuted,
     isReady,
+    hasUserInteracted,
     
     // Estados específicos do app
     displayMode,
@@ -94,6 +99,7 @@ export function PlayerProvider({ children }) {
     changeVolume,
     toggleMute,
     startPlaying,
+    markUserInteraction,
     onPlayerReady,
     onPlayerStateChange,
     playerRef,

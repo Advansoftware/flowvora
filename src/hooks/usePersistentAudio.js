@@ -4,13 +4,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * Hook personalizado para áudio persistente que continua tocando mesmo após reload da página
- * Utiliza localStorage para manter o estado de reprodução
+ * Utiliza localStorage para manter o estado de reprodução e posição de cada música
  */
 export const usePersistentAudio = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [volume, setVolume] = useState(50);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const playerRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
 
@@ -18,6 +19,20 @@ export const usePersistentAudio = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedState = localStorage.getItem('flowvora-audio-state');
+      
+      // Limpar interação do usuário ao recarregar a página (nova sessão)
+      // Mas manter se a música estava tocando (indicando que houve interação prévia)
+      const wasPlaying = savedState ? JSON.parse(savedState).isPlaying : false;
+      if (!wasPlaying) {
+        localStorage.removeItem('flowvora-user-interaction');
+        setHasUserInteracted(false);
+      } else {
+        const userInteraction = localStorage.getItem('flowvora-user-interaction');
+        if (userInteraction) {
+          setHasUserInteracted(true);
+        }
+      }
+      
       if (savedState) {
         try {
           const state = JSON.parse(savedState);
@@ -49,6 +64,50 @@ export const usePersistentAudio = () => {
     }
   }, [isPlaying, currentVideo, volume, isMuted]);
 
+  // Salvar posição atual do vídeo
+  const saveVideoPosition = useCallback((videoId, currentTime) => {
+    if (typeof window !== 'undefined' && videoId && currentTime > 0) {
+      const positionsKey = 'flowvora-video-positions';
+      const savedPositions = localStorage.getItem(positionsKey);
+      const positions = savedPositions ? JSON.parse(savedPositions) : {};
+      
+      positions[videoId] = {
+        currentTime: currentTime,
+        savedAt: Date.now()
+      };
+      
+      localStorage.setItem(positionsKey, JSON.stringify(positions));
+    }
+  }, []);
+
+  // Recuperar posição salva do vídeo
+  const getVideoPosition = useCallback((videoId) => {
+    if (typeof window !== 'undefined' && videoId) {
+      const positionsKey = 'flowvora-video-positions';
+      const savedPositions = localStorage.getItem(positionsKey);
+      
+      if (savedPositions) {
+        const positions = JSON.parse(savedPositions);
+        const position = positions[videoId];
+        
+        if (position && position.currentTime > 0) {
+          return position.currentTime;
+        }
+      }
+    }
+    return 0;
+  }, []);
+
+  // Marcar interação do usuário
+  const markUserInteraction = useCallback(() => {
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('flowvora-user-interaction', 'true');
+      }
+    }
+  }, [hasUserInteracted]);
+
   // Configurar player quando ele estiver pronto
   const onPlayerReady = useCallback((player) => {
     playerRef.current = player;
@@ -58,6 +117,12 @@ export const usePersistentAudio = () => {
     if (player) {
       player.setVolume(isMuted ? 0 : volume);
       
+      // Recuperar posição salva para este vídeo
+      const savedPosition = getVideoPosition(currentVideo);
+      if (savedPosition > 0) {
+        player.seekTo(savedPosition, true);
+      }
+      
       // Se estava tocando antes do reload, retomar reprodução
       if (isPlaying) {
         setTimeout(() => {
@@ -65,12 +130,18 @@ export const usePersistentAudio = () => {
         }, 1000); // Delay para garantir que o player está totalmente carregado
       }
     }
-  }, [volume, isMuted, isPlaying]);
+  }, [volume, isMuted, isPlaying, currentVideo, getVideoPosition]);
 
   // Controlar play/pause
   const togglePlayPause = useCallback(() => {
+    markUserInteraction(); // Marcar interação
+    
     if (playerRef.current && isReady) {
       if (isPlaying) {
+        // Salvar posição atual antes de pausar
+        const currentTime = playerRef.current.getCurrentTime();
+        saveVideoPosition(currentVideo, currentTime);
+        
         playerRef.current.pauseVideo();
         setIsPlaying(false);
       } else {
@@ -78,25 +149,39 @@ export const usePersistentAudio = () => {
         setIsPlaying(true);
       }
     }
-  }, [isPlaying, isReady]);
+  }, [isPlaying, isReady, markUserInteraction, saveVideoPosition, currentVideo]);
 
   // Alterar vídeo
   const changeVideo = useCallback((videoId) => {
+    markUserInteraction(); // Marcar interação
+    
     if (playerRef.current && isReady) {
+      // Salvar posição do vídeo atual antes de trocar
+      const currentTime = playerRef.current.getCurrentTime();
+      saveVideoPosition(currentVideo, currentTime);
+      
       const wasPlaying = isPlaying;
       
       playerRef.current.loadVideoById(videoId);
       setCurrentVideo(videoId);
       
-      if (wasPlaying) {
-        setTimeout(() => {
-          playerRef.current.playVideo();
-        }, 1000);
-      }
+      // Aguardar o vídeo carregar e então recuperar a posição salva
+      setTimeout(() => {
+        const savedPosition = getVideoPosition(videoId);
+        if (savedPosition > 0) {
+          playerRef.current.seekTo(savedPosition, true);
+        }
+        
+        if (wasPlaying) {
+          setTimeout(() => {
+            playerRef.current.playVideo();
+          }, 500);
+        }
+      }, 1000);
     } else {
       setCurrentVideo(videoId);
     }
-  }, [isPlaying, isReady]);
+  }, [isPlaying, isReady, markUserInteraction, saveVideoPosition, getVideoPosition, currentVideo]);
 
   // Controlar volume
   const changeVolume = useCallback((newVolume) => {
@@ -125,8 +210,16 @@ export const usePersistentAudio = () => {
       setIsPlaying(true);
     } else if (event.data === 2) { // Paused
       setIsPlaying(false);
+      // Salvar posição quando pausar
+      if (playerRef.current) {
+        const currentTime = playerRef.current.getCurrentTime();
+        saveVideoPosition(currentVideo, currentTime);
+      }
     } else if (event.data === 0) { // Ended
       setIsPlaying(false);
+      // Salvar que terminou (posição 0 ou duração total)
+      saveVideoPosition(currentVideo, 0);
+      
       // Auto-replay para loop contínuo
       if (playerRef.current) {
         setTimeout(() => {
@@ -134,13 +227,15 @@ export const usePersistentAudio = () => {
         }, 1000);
       }
     }
-  }, []);
+  }, [saveVideoPosition, currentVideo]);
 
   const startPlaying = useCallback(() => {
+    markUserInteraction(); // Marcar interação
+    
     if (playerRef.current && isReady && !isPlaying) {
       playerRef.current.playVideo();
     }
-  }, [isReady, isPlaying]);
+  }, [isReady, isPlaying, markUserInteraction]);
 
   return {
     // Estado
@@ -149,6 +244,7 @@ export const usePersistentAudio = () => {
     volume,
     isMuted,
     isReady,
+    hasUserInteracted,
     
     // Controles
     togglePlayPause,
@@ -156,6 +252,7 @@ export const usePersistentAudio = () => {
     changeVolume,
     toggleMute,
     startPlaying,
+    markUserInteraction,
     
     // Callbacks para o player
     onPlayerReady,
