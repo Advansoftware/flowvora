@@ -5,10 +5,10 @@
  */
 class StorageService {
   constructor() {
-    this.keys = {
-      DISPLAY_MODE: 'flowvora_display_mode',
-      CURRENT_PLAYLIST: 'flowvora_current_playlist',
-      VOLUME: 'flowvora_volume',
+    const STORAGE_KEYS = {
+      DISPLAY_MODE: 'lofivora_display_mode',
+      CURRENT_PLAYLIST: 'lofivora_current_playlist',
+      VOLUME: 'lofivora_volume',
       IS_PLAYING: 'flowvora_is_playing'
     };
   }

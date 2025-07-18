@@ -87,7 +87,7 @@ export const usePersistentAudio = () => {
   // Recuperar posição salva do vídeo
   const getVideoPosition = useCallback((videoId) => {
     if (typeof window !== 'undefined' && videoId) {
-      const positionsKey = 'flowvora-video-positions';
+      const positionsKey = 'lofivora-video-positions';
       const savedPositions = localStorage.getItem(positionsKey);
       
       if (savedPositions) {

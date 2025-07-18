@@ -16,9 +16,9 @@ export const usePlayer = () => {
     
     // Carregar preferências salvas
     if (typeof window !== 'undefined') {
-      const savedVolume = localStorage.getItem('flowvora-volume');
-      const savedPlaylist = localStorage.getItem('flowvora-playlist');
-      const savedMode = localStorage.getItem('flowvora-display-mode');
+      const savedVolume = localStorage.getItem('lofivora-volume');
+      const savedPlaylist = localStorage.getItem('lofivora-playlist');
+      const savedMode = localStorage.getItem('lofivora-display-mode');
       
       if (savedVolume) setVolume(parseInt(savedVolume));
       if (savedPlaylist) setCurrentPlaylistId(savedPlaylist);
@@ -46,7 +46,7 @@ export const usePlayer = () => {
   // Salvar preferências no localStorage
   const saveToStorage = useCallback((key, value) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(`flowvora-${key}`, value);
+      localStorage.setItem(`lofivora-${key}`, value);
     }
   }, []);
 
