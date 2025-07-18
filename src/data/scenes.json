@@ -1,0 +1,87 @@
+{
+  "scenes": [
+    {
+      "id": "cozy-room",
+      "name": "Quarto Aconchegante",
+      "description": "Um quarto tranquilo com chuva na janela e luzes suaves",
+      "videoId": "jfKfPfyJRdk",
+      "animations": [
+        {
+          "type": "rain",
+          "intensity": "medium",
+          "sound": true
+        },
+        {
+          "type": "ambient-light",
+          "color": "#ffd700",
+          "intensity": "low"
+        }
+      ],
+      "mood": "relaxing",
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "cafe-window",
+      "name": "Café com Vista",
+      "description": "Mesa de café com vista para a cidade e chuva leve",
+      "videoId": "5yx6BWlEVcY",
+      "animations": [
+        {
+          "type": "steam",
+          "source": "coffee-cup",
+          "intensity": "low"
+        },
+        {
+          "type": "light-rain",
+          "intensity": "light"
+        }
+      ],
+      "mood": "productive",
+      "timeOfDay": "morning"
+    },
+    {
+      "id": "library-study",
+      "name": "Biblioteca Silenciosa",
+      "description": "Ambiente de biblioteca com atmosfera de estudo concentrado",
+      "videoId": "f02mOEt11OQ",
+      "animations": [
+        {
+          "type": "dust-particles",
+          "intensity": "minimal"
+        },
+        {
+          "type": "warm-light",
+          "color": "#ffcc99",
+          "intensity": "medium"
+        }
+      ],
+      "mood": "focused",
+      "timeOfDay": "afternoon"
+    },
+    {
+      "id": "forest-cabin",
+      "name": "Cabana na Floresta",
+      "description": "Interior aconchegante de cabana com sons da natureza",
+      "videoId": "UZWcHgz6KbU",
+      "animations": [
+        {
+          "type": "fireplace",
+          "intensity": "medium"
+        },
+        {
+          "type": "forest-sounds",
+          "intensity": "ambient"
+        }
+      ],
+      "mood": "peaceful",
+      "timeOfDay": "night"
+    }
+  ],
+  "defaultScene": "cozy-room",
+  "settings": {
+    "autoSwitch": false,
+    "switchInterval": 1800000,
+    "enableAnimations": true,
+    "enableAmbientSounds": true
+  }
+}
