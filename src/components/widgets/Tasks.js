@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -94,7 +94,7 @@ const Tasks = () => {
     ));
   };
 
-  const addPomodoro = (id) => {
+  const addPomodoro = useCallback((id) => {
     setTasks(tasks.map(task => 
       task.id === id 
         ? { 
@@ -104,7 +104,7 @@ const Tasks = () => {
           }
         : task
     ));
-  };
+  }, [tasks]);
 
   const getStatusColor = (status) => {
     switch (status) {
