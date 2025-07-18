@@ -22,18 +22,10 @@ export const usePersistentAudio = () => {
     if (typeof window !== 'undefined') {
       const savedState = localStorage.getItem('lofivora-audio-state');
       
+      // NUNCA tocar automaticamente ao carregar - sempre aguardar interação do usuário
       // Limpar interação do usuário ao recarregar a página (nova sessão)
-      // Mas manter se a música estava tocando (indicando que houve interação prévia)
-      const wasPlaying = savedState ? JSON.parse(savedState).isPlaying : false;
-      if (!wasPlaying) {
-        localStorage.removeItem('lofivora-user-interaction');
-        setHasUserInteracted(false);
-      } else {
-        const userInteraction = localStorage.getItem('lofivora-user-interaction');
-        if (userInteraction) {
-          setHasUserInteracted(true);
-        }
-      }
+      localStorage.removeItem('lofivora-user-interaction');
+      setHasUserInteracted(false);
       
       if (savedState) {
         try {
@@ -41,9 +33,8 @@ export const usePersistentAudio = () => {
           setCurrentVideo(state.currentVideo || 'jfKfPfyJRdk'); // Video padrão
           setVolume(state.volume || 50);
           setIsMuted(state.isMuted || false);
-          // Só restaurar o estado de playing se houve interação prévia
-          const userInteraction = localStorage.getItem('lofivora-user-interaction');
-          setIsPlaying(userInteraction ? (state.isPlaying || false) : false);
+          // SEMPRE iniciar pausado - só tocar após clicar no botão
+          setIsPlaying(false);
         } catch (error) {
           console.warn('Erro ao carregar estado do áudio:', error);
           setCurrentVideo('jfKfPfyJRdk'); // Fallback para vídeo padrão
@@ -127,14 +118,10 @@ export const usePersistentAudio = () => {
         player.seekTo(savedPosition, true);
       }
       
-      // Se estava tocando antes do reload E houve interação do usuário, retomar reprodução
-      if (isPlaying && hasUserInteracted) {
-        setTimeout(() => {
-          player.playVideo();
-        }, 1000); // Delay para garantir que o player está totalmente carregado
-      }
+      // NUNCA tocar automaticamente - sempre aguardar interação do usuário
+      // O player só deve tocar quando o usuário clicar no botão "Entrar no Flow"
     }
-  }, [volume, isMuted, isPlaying, currentVideo, hasUserInteracted, getVideoPosition]);
+  }, [volume, isMuted, currentVideo, getVideoPosition]);
 
   // Controlar play/pause
   const togglePlayPause = useCallback(() => {

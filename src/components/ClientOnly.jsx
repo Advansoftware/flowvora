@@ -13,9 +13,11 @@ export default function ClientOnly({ children, fallback = null }) {
     setHasMounted(true);
   }, []);
 
+  // Durante SSR e antes da hidratação, sempre retornar o fallback
   if (!hasMounted) {
     return fallback;
   }
 
+  // Após hidratação, renderizar os filhos
   return children;
 }

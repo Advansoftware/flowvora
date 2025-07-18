@@ -25,29 +25,22 @@ import RainEffect from '../components/RainEffect';
 import ActiveTaskStatus from '../components/ActiveTaskStatus';
 import WelcomeModal from '../components/WelcomeModal';
 import AdSenseComponent from '../components/AdSenseComponent';
-import ClientOnly from '../components/ClientOnly';
+import NoSSR from '../components/NoSSR';
 import { ADSENSE_CONFIG } from '../config/adsense';
 
 // Componente principal que utiliza o contexto
 function HomeContent() {
-  const { isPlaying, mounted: playerMounted, hasUserInteracted, isReady, startPlaying } = usePlayer();
+  const { isPlaying, mounted: playerMounted, hasUserInteracted, isReady, startPlaying, togglePlayPause } = usePlayer();
   const theme = useTheme();
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false); // Iniciar como false para evitar hidratação
+  const [showWelcome, setShowWelcome] = useState(true); // SEMPRE mostrar o modal inicialmente
   const [showMainContent, setShowMainContent] = useState(false);
+  const [hasStartedExperience, setHasStartedExperience] = useState(false);
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
     setMounted(true);
-    
-    // Verificar se é primeira visita para mostrar modal
-    const hasVisited = localStorage.getItem('lofivora-has-visited');
-    if (!hasVisited) {
-      setShowWelcome(true);
-    } else {
-      setShowMainContent(true);
-    }
     
     // Configurar responsividade
     const updateIsMobile = () => {
@@ -59,6 +52,16 @@ function HomeContent() {
     return () => window.removeEventListener('resize', updateIsMobile);
   }, [theme.breakpoints.values.lg]);
 
+  // Sempre pausar o player quando a página carregar (antes do usuário interagir)
+  useEffect(() => {
+    if (mounted && playerMounted && isReady && !hasStartedExperience) {
+      // Se o player estiver tocando, pausar até o usuário clicar no botão
+      if (isPlaying) {
+        togglePlayPause(); // Pausar
+      }
+    }
+  }, [mounted, playerMounted, isReady, isPlaying, hasStartedExperience, togglePlayPause]);
+
   // Lógica do modal: SEMPRE mostrar na primeira interação (início da sessão)
   useEffect(() => {
     if (mounted && playerMounted) {
@@ -69,13 +72,26 @@ function HomeContent() {
   }, [mounted, playerMounted]);
 
   const handleStartExperience = () => {
-    // Marcar que o usuário visitou o site
-    localStorage.setItem('lofivora-has-visited', 'true');
+    setHasStartedExperience(true);
     
-    // Iniciar o player quando o usuário clicar em "Entrar no Flow"
-    if (isReady && !isPlaying) {
+    // Recuperar o estado anterior do player e iniciar se estava tocando
+    const savedState = localStorage.getItem('lofivora-audio-state');
+    let shouldPlay = false;
+    
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        shouldPlay = state.isPlaying || false;
+      } catch (error) {
+        console.warn('Erro ao recuperar estado do player:', error);
+      }
+    }
+    
+    // Iniciar ou continuar reprodução baseado no estado anterior
+    if (isReady && shouldPlay) {
       startPlaying();
     }
+    
     setShowWelcome(false);
     setShowMainContent(true);
   };
@@ -92,7 +108,7 @@ function HomeContent() {
           justifyContent: 'center',
         }}
       >
-        <Box
+        <Typography
           sx={{
             color: 'rgba(255, 255, 255, 0.7)',
             fontSize: '1.1rem',
@@ -100,15 +116,21 @@ function HomeContent() {
           }}
         >
           🧘‍♀️ Preparando ambiente...
-        </Box>
+        </Typography>
       </Box>
     );
   }
 
-  // Se deve mostrar o modal, mostrar apenas ele (mas com player invisível carregando)
-  if (showWelcome && mounted && playerMounted) {
+  // SEMPRE mostrar o modal primeiro quando a página carrega
+  if (showWelcome) {
     return (
-      <>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          width: '100vw',
+          position: 'relative',
+        }}
+      >
         <WelcomeModal 
           open={true} 
           onStart={handleStartExperience}
@@ -116,33 +138,6 @@ function HomeContent() {
         {/* Player invisível para carregar em background */}
         <Box sx={{ position: 'absolute', top: '-9999px', left: '-9999px', width: '1px', height: '1px', opacity: 0 }}>
           <VisualFrame />
-        </Box>
-      </>
-    );
-  }
-
-  // Se não deve mostrar o conteúdo principal ainda, mostrar loading (não deveria acontecer mais)
-  if (!showMainContent && mounted && playerMounted) {
-    return (
-      <Box
-        suppressHydrationWarning
-        sx={{
-          minHeight: '100vh',
-          width: '100vw',
-          background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Box
-          sx={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '1.1rem',
-            fontWeight: 500,
-          }}
-        >
-          🧘‍♀️ Preparando ambiente...
         </Box>
       </Box>
     );
@@ -448,7 +443,7 @@ function HomeContent() {
 // Wrapper principal que fornece o contexto
 export default function Home() {
   return (
-    <ClientOnly fallback={
+    <NoSSR fallback={
       <Box
         sx={{
           minHeight: '100vh',
@@ -459,7 +454,7 @@ export default function Home() {
           justifyContent: 'center',
         }}
       >
-        <Box
+        <Typography
           sx={{
             color: 'rgba(255, 255, 255, 0.7)',
             fontSize: '1.1rem',
@@ -467,12 +462,12 @@ export default function Home() {
           }}
         >
           🧘‍♀️ Carregando LofiVora...
-        </Box>
+        </Typography>
       </Box>
     }>
       <PlayerProvider>
         <HomeContent />
       </PlayerProvider>
-    </ClientOnly>
+    </NoSSR>
   );
 }
