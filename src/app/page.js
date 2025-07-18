@@ -399,29 +399,28 @@ export default function Home() {
               <Box
                 sx={{
                   position: 'absolute',
-                  bottom: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
+                  bottom: 80, // Muito mais distante do fundo
+                  right: 20, // Posicionado à direita, fora da área central
                   zIndex: 1,
-                  width: '100%',
-                  maxWidth: '728px',
-                  display: { xs: 'none', md: 'block' },
+                  width: '300px', // Largura fixa pequena
+                  display: { xs: 'none', xl: 'block' }, // Só em telas muito grandes
                 }}
               >
                 <AdSenseComponent
                   adSlot={ADSENSE_CONFIG.SLOTS.BOTTOM_BANNER}
                   adClient={ADSENSE_CONFIG.CLIENT_ID}
-                  size="banner"
+                  size="compact-banner" // Usando tamanho compacto
                   style={{
                     container: {
-                      background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.4) 0%, rgba(20, 20, 40, 0.4) 100%)',
-                      backdropFilter: 'blur(15px)',
-                      borderRadius: '12px 12px 0 0',
-                      border: '1px solid rgba(255, 255, 255, 0.03)',
-                      borderBottom: 'none',
-                      padding: '8px',
-                      opacity: 0.7,
+                      background: 'linear-gradient(135deg, rgba(30, 30, 60, 0.2) 0%, rgba(20, 20, 40, 0.2) 100%)', // Ainda mais transparente
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.01)',
+                      padding: '4px',
+                      opacity: 0.4, // Muito sutil
                       transition: 'opacity 0.3s ease',
+                      maxHeight: '50px', // Altura muito restrita
+                      overflow: 'hidden',
                     }
                   }}
                 />

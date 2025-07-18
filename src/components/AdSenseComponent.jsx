@@ -42,9 +42,11 @@ const AdSenseComponent = ({
 
     switch (size) {
       case 'responsive':
-        return { ...baseStyle, width: '100%', height: 'auto' };
+        return { ...baseStyle, width: '100%', height: 'auto', maxHeight: '60px' }; // Altura máxima para responsivo
       case 'banner':
         return { ...baseStyle, width: '728px', height: '90px' };
+      case 'compact-banner':
+        return { ...baseStyle, width: '468px', height: '60px' }; // Novo tamanho compacto
       case 'square':
         return { ...baseStyle, width: '300px', height: '250px' };
       case 'sidebar':
