@@ -14,6 +14,52 @@ export const usePWA = () => {
   const [showOfflineMessage, setShowOfflineMessage] = useState(false);
   const [previousOnlineState, setPreviousOnlineState] = useState(true);
 
+  // Estados do timer em background
+  const [backgroundTimer, setBackgroundTimer] = useState({
+    isRunning: false,
+    timeLeft: 0,
+    mode: 'focus',
+    activeTask: null
+  });
+
+  // Handler para mensagens do Service Worker
+  const handleSWMessage = useCallback((event) => {
+    const { type, data } = event.data || {};
+    
+    switch (type) {
+      case 'TIMER_UPDATE':
+        setBackgroundTimer(data);
+        break;
+        
+      case 'START_NEXT_CYCLE':
+        // App foi aberta via notificação para iniciar próximo ciclo
+        window.dispatchEvent(new CustomEvent('startNextCycle', { 
+          detail: data 
+        }));
+        break;
+        
+      case 'SYNC_COMPLETE':
+        console.log('[PWA] Sincronização completa:', data);
+        break;
+    }
+  }, []);
+
+  // Verificar estado atual do timer no SW
+  const checkBackgroundTimer = useCallback(async () => {
+    if (!navigator.serviceWorker?.controller) return;
+    
+    const messageChannel = new MessageChannel();
+    
+    messageChannel.port1.onmessage = (event) => {
+      setBackgroundTimer(event.data);
+    };
+    
+    navigator.serviceWorker.controller.postMessage(
+      { type: 'GET_TIMER_STATE' },
+      [messageChannel.port2]
+    );
+  }, []);
+
   // Registrar Service Worker
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -22,6 +68,12 @@ export const usePWA = () => {
         .then((registration) => {
           console.log('[PWA] Service Worker registrado:', registration.scope);
           setSwRegistration(registration);
+          
+          // Escutar mensagens do SW
+          navigator.serviceWorker.addEventListener('message', handleSWMessage);
+          
+          // Verificar estado do timer quando registrar
+          checkBackgroundTimer();
           
           // Atualizar Service Worker quando disponível
           registration.addEventListener('updatefound', () => {
@@ -44,6 +96,46 @@ export const usePWA = () => {
           console.error('[PWA] Erro ao registrar Service Worker:', error);
         });
     }
+
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+      }
+    };
+  }, [handleSWMessage, checkBackgroundTimer]);
+
+  // Iniciar timer em background
+  const startBackgroundTimer = useCallback((timeLeft, mode, activeTask) => {
+    if (!navigator.serviceWorker?.controller) {
+      console.warn('[PWA] Service Worker não disponível para timer em background');
+      return false;
+    }
+    
+    navigator.serviceWorker.controller.postMessage({
+      type: 'START_POMODORO_BACKGROUND',
+      data: { timeLeft, mode, activeTask }
+    });
+    
+    return true;
+  }, []);
+
+  // Parar timer em background
+  const stopBackgroundTimer = useCallback(() => {
+    if (!navigator.serviceWorker?.controller) return;
+    
+    navigator.serviceWorker.controller.postMessage({
+      type: 'STOP_POMODORO_BACKGROUND'
+    });
+  }, []);
+
+  // Atualizar tarefa ativa no background
+  const updateActiveTask = useCallback((activeTask) => {
+    if (!navigator.serviceWorker?.controller) return;
+    
+    navigator.serviceWorker.controller.postMessage({
+      type: 'UPDATE_ACTIVE_TASK',
+      data: { activeTask }
+    });
   }, []);
 
   // Monitorar status online/offline
@@ -145,7 +237,7 @@ export const usePWA = () => {
     }
   }, []);
 
-  // Agendar notificação de Pomodoro
+  // Agendar notificação de Pomodoro (deprecated - agora usamos background timer)
   const schedulePomodorNotification = useCallback((title, delay = 25 * 60 * 1000) => {
     setTimeout(() => {
       sendNotification(title, {
@@ -184,13 +276,22 @@ export const usePWA = () => {
     showOnlineMessage,
     showOfflineMessage,
     
-    // Funções
+    // Estados do timer em background
+    backgroundTimer,
+    
+    // Funções básicas
     installPWA,
     requestNotificationPermission,
     sendNotification,
-    schedulePomodorNotification,
+    schedulePomodorNotification, // mantido para compatibilidade
     syncTasks,
     isFeatureAvailableOffline,
+    
+    // Funções do timer em background
+    startBackgroundTimer,
+    stopBackgroundTimer,
+    updateActiveTask,
+    checkBackgroundTimer,
     
     // Componentes de status
     showOfflineIndicator: showOfflineMessage,

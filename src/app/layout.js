@@ -1,4 +1,5 @@
 import { ThemeProvider } from '../providers/ThemeProvider';
+import { TaskProvider } from '../contexts/TaskContext';
 import "./globals.css";
 
 export const metadata = {
@@ -34,6 +35,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <head>
+        {/* Meta tags para PWA imersivo no mobile */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="LofiVora" />
+        <meta name="theme-color" content="#0f0f23" />
+        <meta name="msapplication-navbutton-color" content="#0f0f23" />
+        <meta name="msapplication-TileColor" content="#0f0f23" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        
+        {/* Fontes */}
         <link
           rel="preconnect"
           href="https://fonts.googleapis.com"
@@ -48,9 +60,11 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning={true}>
+            <body suppressHydrationWarning={true}>
         <ThemeProvider>
-          {children}
+          <TaskProvider>
+            {children}
+          </TaskProvider>
         </ThemeProvider>
       </body>
     </html>

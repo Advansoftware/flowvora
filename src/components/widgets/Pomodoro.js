@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useContext, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -9,11 +9,14 @@ import {
   Chip,
   Stack,
   Fade,
+  Tooltip,
 } from '@mui/material';
 import {
   PlayArrow,
   Pause,
   Refresh,
+  Notifications,
+  NotificationsOff,
 } from '@mui/icons-material';
 import { usePWA } from '../../hooks/usePWA';
 
@@ -23,9 +26,39 @@ const Pomodoro = () => {
   const [mode, setMode] = useState('focus');
   const [cycles, setCycles] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [useBackgroundTimer, setUseBackgroundTimer] = useState(true);
+  
+  // Simular tarefa ativa por enquanto (depois será do contexto)
+  const activeTask = useMemo(() => ({ 
+    text: 'Estudar PWA avançado', 
+    id: '1' 
+  }), []);
   
   const intervalRef = useRef(null);
-  const { sendNotification, requestNotificationPermission, isFeatureAvailableOffline } = usePWA();
+  const { 
+    sendNotification, 
+    requestNotificationPermission, 
+    backgroundTimer,
+    startBackgroundTimer,
+    stopBackgroundTimer,
+    updateActiveTask
+  } = usePWA();
+
+  const modes = useMemo(() => ({
+    focus: { duration: 25 * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
+    shortBreak: { duration: 5 * 60, label: 'Pausa', emoji: '☕', color: '#4caf50' },
+    longBreak: { duration: 15 * 60, label: 'Descanso', emoji: '🌟', color: '#2196f3' },
+  }), []);
+
+  // Definir changeMode antes dos useEffects que o utilizam
+  const changeMode = useCallback((newMode) => {
+    if (useBackgroundTimer) {
+      stopBackgroundTimer();
+    }
+    setMode(newMode);
+    setTimeLeft(modes[newMode].duration);
+    setIsRunning(false);
+  }, [useBackgroundTimer, stopBackgroundTimer, modes]);
 
   useEffect(() => {
     setMounted(true);
@@ -33,81 +66,141 @@ const Pomodoro = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       requestNotificationPermission();
     }
-  }, [requestNotificationPermission]);
-  
-  const modes = useMemo(() => ({
-    focus: { duration: 25 * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
-    shortBreak: { duration: 5 * 60, label: 'Pausa', emoji: '☕', color: '#4caf50' },
-    longBreak: { duration: 15 * 60, label: 'Descanso', emoji: '🌟', color: '#2196f3' },
-  }), []);
 
+    // Escutar eventos de notificação para iniciar próximo ciclo
+    const handleStartNextCycle = (event) => {
+      const { mode: nextMode } = event.detail;
+      if (nextMode) {
+        const targetMode = nextMode === 'focus' ? 'shortBreak' : 'focus';
+        changeMode(targetMode);
+        setIsRunning(true);
+      }
+    };
+
+    window.addEventListener('startNextCycle', handleStartNextCycle);
+    
+    return () => {
+      window.removeEventListener('startNextCycle', handleStartNextCycle);
+    };
+  }, [requestNotificationPermission, changeMode]);
+
+  // Sincronizar com o timer em background
+  useEffect(() => {
+    if (useBackgroundTimer && backgroundTimer.isRunning) {
+      setTimeLeft(backgroundTimer.timeLeft);
+      setMode(backgroundTimer.mode);
+      setIsRunning(true);
+    }
+  }, [backgroundTimer, useBackgroundTimer]);
+  
   const currentMode = modes[mode];
   const totalTime = currentMode.duration;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
 
+  // Definir handleTimerComplete antes do useEffect que o utiliza
+  const handleTimerComplete = useCallback(() => {
+    // Enviar notificação quando o timer terminar
+    const notificationTitle = mode === 'focus' 
+      ? '🍅 Pomodoro Completo!' 
+      : '✨ Pausa Terminada!';
+    
+    const taskName = activeTask?.text || 'Sem tarefa ativa';
+    const notificationBody = mode === 'focus'
+      ? `Tarefa: ${taskName}\nParabéns! Você completou uma sessão de foco. Hora da pausa!`
+      : `Sua pausa terminou. Pronto para mais uma sessão de foco?\nPróxima tarefa: ${taskName}`;
+
+    sendNotification(notificationTitle, {
+      body: notificationBody,
+      tag: 'pomodoro-timer',
+      requireInteraction: true,
+      icon: '/icon-512.svg',
+      actions: [
+        { action: 'start-next', title: mode === 'focus' ? 'Iniciar Pausa' : 'Continuar Foco' },
+        { action: 'view-app', title: 'Ver App' }
+      ]
+    });
+
+    if (mode === 'focus') {
+      setCycles(prev => prev + 1);
+      const nextMode = cycles > 0 && cycles % 4 === 3 ? 'longBreak' : 'shortBreak';
+      setMode(nextMode);
+      setTimeLeft(modes[nextMode].duration);
+      
+      // Adicionar pomodoro à tarefa ativa
+      if (typeof window !== 'undefined' && window.lofivoraAddPomodoro) {
+        window.lofivoraAddPomodoro();
+      }
+    } else {
+      setMode('focus');
+      setTimeLeft(modes.focus.duration);
+    }
+    setIsRunning(false);
+  }, [mode, activeTask, sendNotification, cycles, modes]);
+
+  // Timer local (fallback quando background não disponível)
   useEffect(() => {
-    if (isRunning && timeLeft > 0) {
+    if (!useBackgroundTimer && isRunning && timeLeft > 0) {
       intervalRef.current = setInterval(() => {
         setTimeLeft(prev => prev - 1);
       }, 1000);
-    } else {
+    } else if (!useBackgroundTimer) {
       clearInterval(intervalRef.current);
       
       if (timeLeft === 0) {
-        // Enviar notificação quando o timer terminar
-        const notificationTitle = mode === 'focus' 
-          ? '🍅 Pomodoro Completo!' 
-          : '✨ Pausa Terminada!';
-        
-        const notificationBody = mode === 'focus'
-          ? 'Parabéns! Você completou uma sessão de foco. Hora da pausa!'
-          : 'Sua pausa terminou. Pronto para mais uma sessão de foco?';
-
-        sendNotification(notificationTitle, {
-          body: notificationBody,
-          tag: 'pomodoro-timer',
-          requireInteraction: true,
-          icon: '/icon-512.svg',
-          actions: [
-            { action: 'start', title: 'Iniciar' },
-            { action: 'dismiss', title: 'Ok' }
-          ]
-        });
-
-        if (mode === 'focus') {
-          setCycles(prev => prev + 1);
-          const nextMode = cycles > 0 && cycles % 4 === 3 ? 'longBreak' : 'shortBreak';
-          setMode(nextMode);
-          setTimeLeft(modes[nextMode].duration);
-          
-          // Adicionar pomodoro à tarefa ativa
-          if (typeof window !== 'undefined' && window.lofivoraAddPomodoro) {
-            window.lofivoraAddPomodoro();
-          }
-        } else {
-          setMode('focus');
-          setTimeLeft(modes.focus.duration);
-        }
-        setIsRunning(false);
+        handleTimerComplete();
       }
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, timeLeft, mode, cycles, modes, sendNotification]);
+  }, [isRunning, timeLeft, mode, cycles, modes, sendNotification, useBackgroundTimer, handleTimerComplete]);
+
+  const startTimer = useCallback(() => {
+    if (useBackgroundTimer && 'serviceWorker' in navigator) {
+      const success = startBackgroundTimer(timeLeft, mode, activeTask);
+      if (success) {
+        updateActiveTask(activeTask);
+        setIsRunning(true);
+      } else {
+        setUseBackgroundTimer(false);
+        setIsRunning(true);
+      }
+    } else {
+      setIsRunning(true);
+    }
+  }, [useBackgroundTimer, startBackgroundTimer, timeLeft, mode, activeTask, updateActiveTask]);
+
+  const pauseTimer = useCallback(() => {
+    if (useBackgroundTimer) {
+      stopBackgroundTimer();
+    }
+    setIsRunning(false);
+  }, [useBackgroundTimer, stopBackgroundTimer]);
 
   const toggleTimer = () => {
-    setIsRunning(!isRunning);
-  };
-
-  const startTimer = () => {
-    setIsRunning(true);
-  };
-
-  const pauseTimer = () => {
-    setIsRunning(false);
+    if (useBackgroundTimer && 'serviceWorker' in navigator) {
+      if (isRunning) {
+        stopBackgroundTimer();
+        setIsRunning(false);
+      } else {
+        const success = startBackgroundTimer(timeLeft, mode, activeTask);
+        if (success) {
+          updateActiveTask(activeTask);
+          setIsRunning(true);
+        } else {
+          // Fallback para timer local
+          setUseBackgroundTimer(false);
+          setIsRunning(true);
+        }
+      }
+    } else {
+      setIsRunning(!isRunning);
+    }
   };
 
   const resetTimer = () => {
+    if (useBackgroundTimer) {
+      stopBackgroundTimer();
+    }
     setIsRunning(false);
     setTimeLeft(currentMode.duration);
   };
@@ -118,10 +211,14 @@ const Pomodoro = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const changeMode = (newMode) => {
-    setMode(newMode);
-    setTimeLeft(modes[newMode].duration);
-    setIsRunning(false);
+  const toggleBackgroundTimer = () => {
+    if (isRunning) {
+      if (useBackgroundTimer) {
+        stopBackgroundTimer();
+      }
+      setIsRunning(false);
+    }
+    setUseBackgroundTimer(!useBackgroundTimer);
   };
 
   // Expor funções globais para controle do Pomodoro pelas tarefas
@@ -130,7 +227,7 @@ const Pomodoro = () => {
       window.lofivoraStartPomodoro = startTimer;
       window.lofivoraPausePomodoro = pauseTimer;
     }
-  }, []);
+  }, [startTimer, pauseTimer]);
 
   if (!mounted) return null;
 
@@ -148,30 +245,64 @@ const Pomodoro = () => {
         }}
       >
         <Stack spacing={2}>
-          {/* Header compacto */}
+          {/* Header com informações da tarefa ativa */}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              }}
-            >
-              {currentMode.emoji} {currentMode.label}
-            </Typography>
-            <Chip
-              label={`${cycles} ciclos`}
-              size="small"
-              sx={{
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'white',
-                fontSize: '0.7rem',
-              }}
-            />
+            <Box>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                }}
+              >
+                {currentMode.emoji} {currentMode.label}
+              </Typography>
+              {activeTask && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '0.7rem',
+                    display: 'block',
+                    maxWidth: '200px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  📋 {activeTask.text}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Tooltip title={useBackgroundTimer ? "Timer em background ativo" : "Timer local"}>
+                <IconButton
+                  size="small"
+                  onClick={toggleBackgroundTimer}
+                  sx={{
+                    color: useBackgroundTimer ? '#4caf50' : 'rgba(255, 255, 255, 0.5)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                >
+                  {useBackgroundTimer ? <Notifications /> : <NotificationsOff />}
+                </IconButton>
+              </Tooltip>
+              <Chip
+                label={`${cycles} ciclos`}
+                size="small"
+                sx={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  fontSize: '0.7rem',
+                }}
+              />
+            </Box>
           </Box>
 
           {/* Timer display */}
@@ -187,6 +318,18 @@ const Pomodoro = () => {
             >
               {formatTime(timeLeft)}
             </Typography>
+            {useBackgroundTimer && backgroundTimer.isRunning && (
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#4caf50',
+                  fontSize: '0.7rem',
+                  display: 'block',
+                }}
+              >
+                ⚡ Executando em background
+              </Typography>
+            )}
           </Box>
 
           {/* Progress bar */}

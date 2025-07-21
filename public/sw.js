@@ -1,6 +1,6 @@
-// Service Worker para LofiVora PWA
-const CACHE_NAME = 'lofivora-v1';
-const API_CACHE_NAME = 'lofivora-api-v1';
+// Service Worker para LofiVora PWA - Versão Avançada
+const CACHE_NAME = 'lofivora-v2';
+const API_CACHE_NAME = 'lofivora-api-v2';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
 const STATIC_ASSETS = [
@@ -9,8 +9,6 @@ const STATIC_ASSETS = [
   '/favicon.svg',
   '/icon-512.svg',
   '/meia-noite.png',
-  '/_next/static/css/',
-  '/_next/static/js/',
 ];
 
 // URLs que NÃO devem ser cachadas (requerem internet)
@@ -23,6 +21,16 @@ const NETWORK_ONLY_URLs = [
   '/doubleclick.net',
   '/adsystem.google',
 ];
+
+// Timer global para Pomodoro em background
+let backgroundTimer = null;
+let timerState = {
+  isRunning: false,
+  timeLeft: 0,
+  mode: 'focus',
+  activeTask: null,
+  startTime: null
+};
 
 // Instalação do Service Worker
 self.addEventListener('install', (event) => {
@@ -149,30 +157,81 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Clique em notificações
+// Click handler para notificações
 self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.notification.data);
+  
   event.notification.close();
   
-  if (event.action === 'dismiss') return;
-  
-  const url = event.notification.data.url || '/';
+  const { action } = event;
+  const notificationData = event.notification.data || {};
   
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      // Se já existe uma janela aberta, focar nela
-      for (const client of clientList) {
-        if (client.url === url && 'focus' in client) {
-          return client.focus();
-        }
-      }
+    (async () => {
+      const clients = await self.clients.matchAll({ type: 'window' });
       
-      // Caso contrário, abrir nova janela
-      if (clients.openWindow) {
-        return clients.openWindow(url);
+      switch (action) {
+        case 'start-next':
+          // Comunicar para a app iniciar próximo ciclo
+          if (clients.length > 0) {
+            clients[0].postMessage({
+              type: 'START_NEXT_CYCLE',
+              data: { mode: notificationData.mode }
+            });
+            clients[0].focus();
+          } else {
+            // Abrir app se não estiver aberta
+            self.clients.openWindow('/');
+          }
+          break;
+          
+        case 'view-app':
+          if (clients.length > 0) {
+            clients[0].focus();
+          } else {
+            self.clients.openWindow('/');
+          }
+          break;
+          
+        case 'dismiss':
+        default:
+          // Apenas fecha a notificação
+          break;
       }
-    })
+    })()
   );
 });
+
+// Background sync para quando voltar online
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(
+      // Sincronizar dados quando voltar online
+      syncDataWhenOnline()
+    );
+  }
+});
+
+async function syncDataWhenOnline() {
+  try {
+    console.log('[SW] Sincronizando dados em background...');
+    
+    // Aqui poderia sincronizar dados de tarefas, estatísticas, etc.
+    // Por enquanto apenas log
+    
+    // Notificar clients que sincronização foi completa
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'SYNC_COMPLETE',
+        data: { timestamp: Date.now() }
+      });
+    });
+    
+  } catch (error) {
+    console.error('[SW] Erro na sincronização:', error);
+  }
+}
 
 // Função para sincronizar tarefas
 async function syncTasks() {
@@ -192,7 +251,153 @@ async function syncTasks() {
 
 // Message handling para comunicação com a app
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  const { type, data } = event.data || {};
+  
+  switch (type) {
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
+      
+    case 'START_POMODORO_BACKGROUND':
+      startBackgroundTimer(data);
+      break;
+      
+    case 'STOP_POMODORO_BACKGROUND':
+      stopBackgroundTimer();
+      break;
+      
+    case 'GET_TIMER_STATE':
+      event.ports[0].postMessage(getTimerState());
+      break;
+      
+    case 'UPDATE_ACTIVE_TASK':
+      timerState.activeTask = data.activeTask;
+      break;
   }
 });
+
+// Funções do timer em background
+function startBackgroundTimer(data) {
+  const { timeLeft, mode, activeTask } = data;
+  
+  timerState = {
+    isRunning: true,
+    timeLeft: timeLeft,
+    mode: mode,
+    activeTask: activeTask,
+    startTime: Date.now()
+  };
+  
+  // Limpar timer anterior se existir
+  if (backgroundTimer) {
+    clearInterval(backgroundTimer);
+  }
+  
+  // Iniciar novo timer
+  backgroundTimer = setInterval(() => {
+    timerState.timeLeft--;
+    
+    // Quando terminar
+    if (timerState.timeLeft <= 0) {
+      handleTimerComplete();
+    }
+    
+    // Enviar updates para a app se estiver aberta
+    broadcastTimerUpdate();
+    
+  }, 1000);
+  
+  console.log('[SW] Timer iniciado em background:', timerState);
+}
+
+function stopBackgroundTimer() {
+  if (backgroundTimer) {
+    clearInterval(backgroundTimer);
+    backgroundTimer = null;
+  }
+  timerState.isRunning = false;
+  console.log('[SW] Timer parado');
+}
+
+function getTimerState() {
+  if (timerState.isRunning && timerState.startTime) {
+    // Calcular tempo restante baseado no tempo real decorrido
+    const elapsed = Math.floor((Date.now() - timerState.startTime) / 1000);
+    const actualTimeLeft = Math.max(0, timerState.timeLeft - elapsed);
+    
+    return {
+      ...timerState,
+      timeLeft: actualTimeLeft
+    };
+  }
+  return timerState;
+}
+
+function handleTimerComplete() {
+  stopBackgroundTimer();
+  
+  const isPomodoro = timerState.mode === 'focus';
+  const taskName = timerState.activeTask?.text || 'Sem tarefa ativa';
+  
+  // Definir títulos e mensagens
+  const title = isPomodoro ? '🍅 Pomodoro Completo!' : '✨ Pausa Terminada!';
+  
+  let body = '';
+  if (isPomodoro) {
+    body = `Tarefa: ${taskName}\nParabéns! Você completou uma sessão de foco. Hora da pausa!`;
+  } else {
+    body = `Sua pausa terminou. Pronto para mais uma sessão de foco?\nPróxima tarefa: ${taskName}`;
+  }
+  
+  const options = {
+    body: body,
+    icon: '/icon-512.svg',
+    badge: '/favicon.svg',
+    vibrate: [200, 100, 200, 100, 200],
+    requireInteraction: true,
+    tag: 'pomodoro-complete',
+    data: {
+      url: '/',
+      mode: timerState.mode,
+      taskId: timerState.activeTask?.id
+    },
+    actions: [
+      {
+        action: 'start-next',
+        title: isPomodoro ? 'Iniciar Pausa' : 'Continuar Foco'
+      },
+      {
+        action: 'view-app',
+        title: 'Ver App'
+      },
+      {
+        action: 'dismiss',
+        title: 'Ok'
+      }
+    ]
+  };
+  
+  // Enviar notificação
+  self.registration.showNotification(title, options);
+  
+  // Resetar estado
+  timerState = {
+    isRunning: false,
+    timeLeft: 0,
+    mode: isPomodoro ? 'shortBreak' : 'focus',
+    activeTask: timerState.activeTask,
+    startTime: null
+  };
+}
+
+function broadcastTimerUpdate() {
+  // Enviar update para todas as janelas abertas
+  self.clients.matchAll({ type: 'window' }).then(clients => {
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'TIMER_UPDATE',
+        data: getTimerState()
+      });
+    });
+  });
+}

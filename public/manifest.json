@@ -3,9 +3,10 @@
   "short_name": "LofiVora",
   "description": "Ambiente relaxante para foco e produtividade com música lo-fi. Funciona offline para tarefas e Pomodoro!",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "background_color": "#0f0f23",
-  "theme_color": "#64b5f6",
+  "theme_color": "#0f0f23",
   "orientation": "any",
   "scope": "/",
   "icons": [
@@ -26,6 +27,10 @@
   "lang": "pt-BR",
   "dir": "ltr",
   "prefer_related_applications": false,
+  "edge_side_panel": {},
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
   "shortcuts": [
     {
       "name": "Nova Tarefa",
