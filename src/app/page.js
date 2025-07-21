@@ -172,8 +172,8 @@ function HomeContent() {
             flexDirection: 'column',
             position: 'relative',
             zIndex: 2,
-            py: { xs: 2, sm: 3, lg: 4 },
-            px: { xs: 2, sm: 3, lg: 4 },
+            py: { xs: 0, sm: 1, lg: 2 }, // Reduzido padding vertical, zero no mobile
+            px: { xs: 1, sm: 2, lg: 4 }, // Reduzido padding horizontal no mobile
           }}
         >
           {isMobile ? (

@@ -20,6 +20,61 @@ body {
   color: #e2e8f0;
   overflow-x: hidden;
   max-width: 100vw;
+  /* PWA fullscreen support - remove safe areas */
+  padding-top: 0;
+  margin-top: 0;
+}
+
+/* PWA fullscreen adjustments */
+@supports (padding: max(0px)) {
+  body {
+    /* Remove safe area padding for true fullscreen */
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+/* Ensure PWA uses full viewport */
+html, body {
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* PWA detection and fullscreen styles */
+@media all and (display-mode: fullscreen) {
+  html, body {
+    /* True fullscreen for PWA */
+    padding: 0 !important;
+    margin: 0 !important;
+    /* Force edge-to-edge display */
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  
+  /* Remove any system UI spacing */
+  #__next {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+@media all and (display-mode: standalone) {
+  html, body {
+    /* Standalone PWA mode */
+    padding: 0 !important;
+    margin: 0 !important;
+    /* Force edge-to-edge display */
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  
+  /* Remove any system UI spacing */
+  #__next {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
 }
 
 /* Scrollbar customizada */

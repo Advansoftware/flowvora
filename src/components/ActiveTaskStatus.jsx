@@ -64,7 +64,7 @@ const ActiveTaskStatus = () => {
       <Box
         sx={{
           position: 'fixed',
-          top: 20,
+          top: { xs: 20, sm: 20 }, // Posicionamento ajustado para layout sem padding
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000,

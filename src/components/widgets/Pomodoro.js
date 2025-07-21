@@ -31,11 +31,36 @@ const Pomodoro = () => {
   const [initialTimeLeft, setInitialTimeLeft] = useState(25 * 60);
   const [backgroundTimerAvailable, setBackgroundTimerAvailable] = useState(false);
   
-  // Simular tarefa ativa por enquanto (depois será do contexto)
-  const activeTask = useMemo(() => ({ 
-    text: 'Estudar PWA avançado', 
-    id: '1' 
-  }), []);
+  // Buscar tarefa ativa do localStorage
+  const [activeTask, setActiveTask] = useState(null);
+  
+  // Atualizar tarefa ativa
+  useEffect(() => {
+    const updateActiveTask = () => {
+      if (typeof window !== 'undefined') {
+        const savedTasks = localStorage.getItem('lofivora-tasks');
+        if (savedTasks) {
+          try {
+            const tasks = JSON.parse(savedTasks);
+            const active = tasks.find(task => task.status === 'in-progress' && !task.completed);
+            setActiveTask(active || null);
+          } catch (error) {
+            console.error('Erro ao carregar tarefa ativa:', error);
+          }
+        } else {
+          setActiveTask(null);
+        }
+      }
+    };
+
+    // Atualizar imediatamente
+    updateActiveTask();
+
+    // Verificar mudanças no localStorage
+    const interval = setInterval(updateActiveTask, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   const intervalRef = useRef(null);
   const { 
@@ -363,6 +388,12 @@ const Pomodoro = () => {
 
   if (!mounted) return null;
 
+  // Função para truncar texto da tarefa no Pomodoro
+  const truncateTaskText = (text, maxLength = 25) => {
+    if (!text) return '';
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
   return (
     <Fade in timeout={800}>
       <Box
@@ -405,8 +436,9 @@ const Pomodoro = () => {
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}
+                  title={activeTask.text} // Mostrar texto completo no hover
                 >
-                  📋 {activeTask.text}
+                  📋 {truncateTaskText(activeTask.text)}
                 </Typography>
               )}
             </Box>
