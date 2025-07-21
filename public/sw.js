@@ -296,35 +296,34 @@ self.addEventListener('message', (event) => {
 function startBackgroundTimer(data) {
   const { timeLeft, mode, activeTask } = data;
   
+  // Limpar timer anterior se existir
+  if (backgroundTimer) {
+    clearInterval(backgroundTimer);
+  }
+  
   timerState = {
     isRunning: true,
     timeLeft: timeLeft,
     mode: mode,
     activeTask: activeTask,
     startTime: Date.now(),
-    realStartTime: Date.now() // Tempo real de início
+    realStartTime: Date.now(), // Tempo real de início
+    initialDuration: timeLeft  // Duração inicial para evitar bugs
   };
   
-  // Limpar timer anterior se existir
-  if (backgroundTimer) {
-    clearInterval(backgroundTimer);
-  }
-  
-  // Mostrar notificação persistente durante execução
+  // Mostrar notificação inicial (silenciosa)
   showPersistentNotification();
   
   // Iniciar novo timer
   backgroundTimer = setInterval(() => {
-    // Calcular tempo baseado no tempo real decorrido para evitar bugs
+    // Calcular tempo baseado no tempo real decorrido para evitar bugs de precisão
     const realElapsed = Math.floor((Date.now() - timerState.realStartTime) / 1000);
-    timerState.timeLeft = Math.max(0, timeLeft - realElapsed);
-    
-    // Atualizar notificação persistente
-    updatePersistentNotification();
+    timerState.timeLeft = Math.max(0, timerState.initialDuration - realElapsed);
     
     // Quando terminar
     if (timerState.timeLeft <= 0) {
       handleTimerComplete();
+      return;
     }
     
     // Enviar updates para a app se estiver aberta
@@ -355,8 +354,8 @@ function showPersistentNotification() {
   const taskName = timerState.activeTask?.text || 'Tarefa';
   const timeFormatted = formatTime(timerState.timeLeft);
   
-  const title = isPomodoro ? `🍅 ${timeFormatted} - Focando` : `☕ ${timeFormatted} - Pausando`;
-  const body = `${taskName}${isPomodoro ? ' • Modo Foco' : ' • Modo Pausa'}`;
+  const title = isPomodoro ? `🍅 Pomodoro Iniciado` : `☕ Pausa Iniciada`;
+  const body = `${taskName} • ${isPomodoro ? 'Modo Foco' : 'Modo Pausa'} • ${timeFormatted}`;
   
   const options = {
     body: body,
@@ -388,15 +387,9 @@ function showPersistentNotification() {
 }
 
 function updatePersistentNotification() {
-  // Fechar notificação anterior
-  self.registration.getNotifications({ tag: 'pomodoro-running' }).then(notifications => {
-    notifications.forEach(notification => notification.close());
-  });
-  
-  // Mostrar nova notificação atualizada
-  if (timerState.isRunning) {
-    showPersistentNotification();
-  }
+  // Removido - não precisamos atualizar a notificação a cada segundo
+  // A notificação inicial já mostra o status correto
+  console.log('[SW] Timer executando - tempo restante:', formatTime(timerState.timeLeft));
 }
 
 function formatTime(seconds) {
@@ -406,10 +399,10 @@ function formatTime(seconds) {
 }
 
 function getTimerState() {
-  if (timerState.isRunning && timerState.startTime) {
+  if (timerState.isRunning && timerState.realStartTime) {
     // Calcular tempo restante baseado no tempo real decorrido
-    const elapsed = Math.floor((Date.now() - timerState.startTime) / 1000);
-    const actualTimeLeft = Math.max(0, timerState.timeLeft - elapsed);
+    const elapsed = Math.floor((Date.now() - timerState.realStartTime) / 1000);
+    const actualTimeLeft = Math.max(0, timerState.initialDuration - elapsed);
     
     return {
       ...timerState,
@@ -425,14 +418,31 @@ function handleTimerComplete() {
   const isPomodoro = timerState.mode === 'focus';
   const taskName = timerState.activeTask?.text || 'Sem tarefa ativa';
   
-  // Definir títulos e mensagens
-  const title = isPomodoro ? '🍅 Pomodoro Completo!' : '✨ Pausa Terminada!';
-  
+  // Definir próximo modo baseado na lógica do Pomodoro
+  let nextMode = 'focus';
+  let title = '';
   let body = '';
+  let emoji = '';
+  
   if (isPomodoro) {
-    body = `Tarefa: ${taskName}\nParabéns! Você completou uma sessão de foco. Hora da pausa!`;
-  } else {
-    body = `Sua pausa terminou. Pronto para mais uma sessão de foco?\nPróxima tarefa: ${taskName}`;
+    // Terminou um pomodoro - calcular qual pausa
+    // Por simplicidade, vamos usar shortBreak (deveria vir do estado global dos ciclos)
+    nextMode = 'shortBreak';
+    title = '🍅 Pomodoro Completo!';
+    body = `Tarefa concluída: ${taskName}\n⏰ Hora da pausa de 5 minutos`;
+    emoji = '☕';
+  } else if (timerState.mode === 'shortBreak') {
+    // Terminou pausa curta
+    nextMode = 'focus';
+    title = '☕ Pausa Curta Terminada!';
+    body = `Pausa concluída!\n🍅 Pronto para mais uma sessão de foco?`;
+    emoji = '🍅';
+  } else if (timerState.mode === 'longBreak') {
+    // Terminou pausa longa
+    nextMode = 'focus';
+    title = '🌟 Descanso Prolongado Terminado!';
+    body = `Descanso concluído!\n🍅 Hora de focar novamente`;
+    emoji = '🍅';
   }
   
   const options = {
@@ -445,20 +455,21 @@ function handleTimerComplete() {
     data: {
       url: '/',
       mode: timerState.mode,
+      nextMode: nextMode,
       taskId: timerState.activeTask?.id
     },
     actions: [
       {
         action: 'start-next',
-        title: isPomodoro ? 'Iniciar Pausa' : 'Continuar Foco'
+        title: `${emoji} Iniciar ${nextMode === 'focus' ? 'Foco' : nextMode === 'shortBreak' ? 'Pausa' : 'Descanso'}`
       },
       {
         action: 'view-app',
-        title: 'Ver App'
+        title: '👁️ Ver App'
       },
       {
         action: 'dismiss',
-        title: 'Ok'
+        title: '✋ Mais tarde'
       }
     ]
   };
@@ -470,7 +481,7 @@ function handleTimerComplete() {
   timerState = {
     isRunning: false,
     timeLeft: 0,
-    mode: isPomodoro ? 'shortBreak' : 'focus',
+    mode: nextMode,
     activeTask: timerState.activeTask,
     startTime: null
   };

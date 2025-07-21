@@ -111,43 +111,61 @@ const Pomodoro = () => {
 
   // Definir handleTimerComplete antes do useEffect que o utiliza
   const handleTimerComplete = useCallback(() => {
-    // Enviar notificação quando o timer terminar
-    const notificationTitle = mode === 'focus' 
-      ? '🍅 Pomodoro Completo!' 
-      : '✨ Pausa Terminada!';
+    let nextMode = 'focus';
+    let notificationTitle = '';
+    let notificationBody = '';
     
-    const taskName = activeTask?.text || 'Sem tarefa ativa';
-    const notificationBody = mode === 'focus'
-      ? `Tarefa: ${taskName}\nParabéns! Você completou uma sessão de foco. Hora da pausa!`
-      : `Sua pausa terminou. Pronto para mais uma sessão de foco?\nPróxima tarefa: ${taskName}`;
-
-    sendNotification(notificationTitle, {
-      body: notificationBody,
-      tag: 'pomodoro-timer',
-      requireInteraction: true,
-      icon: '/icon-512.svg',
-      actions: [
-        { action: 'start-next', title: mode === 'focus' ? 'Iniciar Pausa' : 'Continuar Foco' },
-        { action: 'view-app', title: 'Ver App' }
-      ]
-    });
-
     if (mode === 'focus') {
-      setCycles(prev => prev + 1);
-      const nextMode = cycles > 0 && cycles % 4 === 3 ? 'longBreak' : 'shortBreak';
-      setMode(nextMode);
-      setTimeLeft(modes[nextMode].duration);
+      // Completou um pomodoro
+      const newCycles = cycles + 1;
+      setCycles(newCycles);
+      
+      // A cada 4 pomodoros, descanso longo
+      nextMode = newCycles > 0 && newCycles % 4 === 0 ? 'longBreak' : 'shortBreak';
+      
+      notificationTitle = '🍅 Pomodoro Completo!';
+      const taskName = activeTask?.text || 'Tarefa';
+      notificationBody = `Tarefa: ${taskName}\n⏰ Hora da pausa!`;
       
       // Adicionar pomodoro à tarefa ativa
       if (typeof window !== 'undefined' && window.lofivoraAddPomodoro) {
         window.lofivoraAddPomodoro();
       }
-    } else {
-      setMode('focus');
-      setTimeLeft(modes.focus.duration);
+    } else if (mode === 'shortBreak') {
+      nextMode = 'focus';
+      notificationTitle = '☕ Pausa Curta Terminada!';
+      notificationBody = `Pausa de 5 minutos concluída!\n🍅 Pronto para focar?`;
+    } else if (mode === 'longBreak') {
+      nextMode = 'focus';
+      notificationTitle = '🌟 Descanso Prolongado Terminado!';
+      notificationBody = `Descanso de 15 minutos concluído!\n🍅 Vamos focar novamente?`;
     }
+
+    // Enviar notificação apenas quando completar um ciclo
+    sendNotification(notificationTitle, {
+      body: notificationBody,
+      tag: 'pomodoro-complete',
+      requireInteraction: true,
+      icon: '/icon-512.svg',
+      vibrate: [200, 100, 200, 100, 200],
+      actions: [
+        { 
+          action: 'start-next', 
+          title: nextMode === 'focus' ? '🍅 Iniciar Foco' : 
+                 nextMode === 'shortBreak' ? '☕ Iniciar Pausa' : 
+                 '🌟 Iniciar Descanso'
+        },
+        { action: 'view-app', title: '👁️ Ver App' }
+      ]
+    });
+
+    // Mudar para o próximo modo
+    setMode(nextMode);
+    setTimeLeft(modes[nextMode].duration);
+    setInitialTimeLeft(modes[nextMode].duration);
     setIsRunning(false);
-  }, [mode, activeTask, sendNotification, cycles, modes]);
+    setTimerStartTime(null);
+  }, [mode, activeTask, sendNotification, modes, cycles]);
 
   // Timer local (fallback quando background não disponível)
   useEffect(() => {
@@ -182,6 +200,20 @@ const Pomodoro = () => {
   }, [isRunning, timeLeft, useBackgroundTimer, handleTimerComplete, timerStartTime, initialTimeLeft]);
 
   const startTimer = useCallback(() => {
+    // Enviar notificação de início
+    const taskName = activeTask?.text || 'Tarefa';
+    const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
+    const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
+    
+    sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
+      body: `${taskName} • ${formatTime(timeLeft)}`,
+      tag: 'pomodoro-start',
+      requireInteraction: false,
+      icon: '/icon-512.svg',
+      silent: true
+      // Removido actions para evitar erro - notificação de início é apenas informativa
+    });
+
     if (useBackgroundTimer && 'serviceWorker' in navigator) {
       const success = startBackgroundTimer(timeLeft, mode, activeTask);
       if (success) {
@@ -200,7 +232,7 @@ const Pomodoro = () => {
       setInitialTimeLeft(timeLeft);
       setIsRunning(true);
     }
-  }, [useBackgroundTimer, startBackgroundTimer, timeLeft, mode, activeTask, updateActiveTask]);
+  }, [useBackgroundTimer, startBackgroundTimer, timeLeft, mode, activeTask, updateActiveTask, sendNotification]);
 
   const pauseTimer = useCallback(() => {
     if (useBackgroundTimer) {
@@ -217,6 +249,20 @@ const Pomodoro = () => {
         setIsRunning(false);
         setTimerStartTime(null);
       } else {
+        // Enviar notificação de início
+        const taskName = activeTask?.text || 'Tarefa';
+        const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
+        const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
+        
+        sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
+          body: `${taskName} • ${formatTime(timeLeft)}`,
+          tag: 'pomodoro-start',
+          requireInteraction: false,
+          icon: '/icon-512.svg',
+          silent: true
+          // Removido actions para evitar erro - notificação de início é apenas informativa
+        });
+
         const success = startBackgroundTimer(timeLeft, mode, activeTask);
         if (success) {
           updateActiveTask(activeTask);
@@ -236,6 +282,20 @@ const Pomodoro = () => {
         setIsRunning(false);
         setTimerStartTime(null);
       } else {
+        // Enviar notificação de início para timer local também
+        const taskName = activeTask?.text || 'Tarefa';
+        const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
+        const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
+        
+        sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
+          body: `${taskName} • ${formatTime(timeLeft)}`,
+          tag: 'pomodoro-start',
+          requireInteraction: false,
+          icon: '/icon-512.svg',
+          silent: true
+          // Removido actions para evitar erro - notificação de início é apenas informativa
+        });
+
         setTimerStartTime(Date.now());
         setInitialTimeLeft(timeLeft);
         setIsRunning(true);

@@ -231,14 +231,30 @@ export const usePWA = () => {
   // Enviar notificação local
   const sendNotification = useCallback((title, options = {}) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      const notification = new Notification(title, {
-        icon: '/icon-512.svg',
-        badge: '/favicon.svg',
-        vibrate: [200, 100, 200],
-        ...options
-      });
+      // Separar opções que são suportadas pela API Notification padrão
+      const { actions, ...standardOptions } = options;
       
-      return notification;
+      if (navigator.serviceWorker && navigator.serviceWorker.ready && actions) {
+        // Se tem actions, usar Service Worker notification
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(title, {
+            icon: '/icon-512.svg',
+            badge: '/favicon.svg',
+            vibrate: options.silent ? undefined : [200, 100, 200],
+            ...options
+          });
+        });
+      } else {
+        // Usar notificação padrão sem actions
+        const notification = new Notification(title, {
+          icon: '/icon-512.svg',
+          badge: '/favicon.svg',
+          vibrate: standardOptions.silent ? undefined : [200, 100, 200],
+          ...standardOptions
+        });
+        
+        return notification;
+      }
     }
   }, []);
 
