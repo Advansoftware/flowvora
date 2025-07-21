@@ -9,10 +9,17 @@ export const usePWA = () => {
   const [swRegistration, setSwRegistration] = useState(null);
   const [notificationPermission, setNotificationPermission] = useState('default');
   
-  // Estados para mensagens temporárias
+    // Estados das mensagens
   const [showOnlineMessage, setShowOnlineMessage] = useState(false);
   const [showOfflineMessage, setShowOfflineMessage] = useState(false);
   const [previousOnlineState, setPreviousOnlineState] = useState(true);
+
+  // Estados de atualização do PWA
+  const [updateStatus, setUpdateStatus] = useState({
+    isUpdating: false,
+    progress: 0,
+    status: 'idle', // 'idle', 'checking', 'downloading', 'installing', 'completed'
+  });
 
   // Estados do timer em background
   const [backgroundTimer, setBackgroundTimer] = useState({
@@ -22,12 +29,37 @@ export const usePWA = () => {
     activeTask: null
   });
 
-  // Estados de atualização do PWA
-  const [updateStatus, setUpdateStatus] = useState({
-    isUpdating: false,
-    progress: 0,
-    status: 'idle', // 'idle', 'checking', 'downloading', 'installing', 'completed'
-  });
+  // Função para revalidar permissão de notificação
+  const revalidateNotificationPermission = useCallback(() => {
+    if ('Notification' in window) {
+      const currentPermission = Notification.permission;
+      setNotificationPermission(currentPermission);
+      console.log('[PWA] Revalidando permissão de notificação:', currentPermission);
+      return currentPermission;
+    }
+    return 'default';
+  }, []);
+
+  // Revalidar permissão quando o app ganha foco
+  useEffect(() => {
+    const handleFocus = () => {
+      revalidateNotificationPermission();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        revalidateNotificationPermission();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [revalidateNotificationPermission]);
 
   // Handler para mensagens do Service Worker
   const handleSWMessage = useCallback((event) => {
@@ -50,6 +82,15 @@ export const usePWA = () => {
         window.dispatchEvent(new CustomEvent('timerPausedFromNotification'));
         break;
         
+      case 'UPDATE_AVAILABLE':
+        // Nova versão disponível - não usar alert, apenas setState
+        setUpdateStatus({
+          isUpdating: false,
+          progress: 0,
+          status: 'available'
+        });
+        console.log('[PWA] Nova versão detectada - popover será exibido');
+        break;
       case 'UPDATE_PROGRESS':
         // Progresso da atualização
         setUpdateStatus(prev => ({
@@ -110,13 +151,13 @@ export const usePWA = () => {
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
-              console.log('[PWA] Nova versão detectada, iniciando atualização automática');
+              console.log('[PWA] Nova versão detectada');
               
-              // Iniciar tela de atualização
+              // Mostrar popover de atualização disponível
               setUpdateStatus({
-                isUpdating: true,
+                isUpdating: false,
                 progress: 0,
-                status: 'downloading'
+                status: 'available'
               });
 
               newWorker.addEventListener('statechange', () => {
@@ -127,7 +168,8 @@ export const usePWA = () => {
                     setUpdateStatus(prev => ({
                       ...prev,
                       progress: 25,
-                      status: 'installing'
+                      status: 'installing',
+                      isUpdating: true
                     }));
                     break;
                     
@@ -139,10 +181,8 @@ export const usePWA = () => {
                     }));
                     
                     if (navigator.serviceWorker.controller) {
-                      // Automaticamente ativar nova versão
-                      setTimeout(() => {
-                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                      }, 1000);
+                      // Aguardar comando do usuário para ativar
+                      console.log('[PWA] Nova versão pronta, aguardando ativação do usuário');
                     }
                     break;
                     
@@ -399,6 +439,31 @@ export const usePWA = () => {
     }
   }, [swRegistration]);
 
+  // Iniciar atualização manualmente
+  const startUpdate = useCallback(() => {
+    if (swRegistration && swRegistration.waiting) {
+      console.log('[PWA] Iniciando atualização...');
+      
+      setUpdateStatus({
+        isUpdating: true,
+        progress: 0,
+        status: 'downloading'
+      });
+
+      // Enviar comando para ativar nova versão
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  }, [swRegistration]);
+
+  // Dispensar notificação de atualização
+  const dismissUpdate = useCallback(() => {
+    setUpdateStatus({
+      isUpdating: false,
+      progress: 0,
+      status: 'idle'
+    });
+  }, []);
+
   // Verificar se funcionalidades específicas estão disponíveis offline
   const isFeatureAvailableOffline = useCallback((feature) => {
     const offlineFeatures = ['tasks', 'pomodoro', 'scenes', 'storage'];
@@ -438,6 +503,8 @@ export const usePWA = () => {
     // Funções de atualização
     completeUpdate,
     checkForUpdates,
+    startUpdate,
+    dismissUpdate,
     
     // Componentes de status
     showOfflineIndicator: showOfflineMessage,

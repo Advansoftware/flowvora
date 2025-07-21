@@ -1,6 +1,6 @@
 // Service Worker para LofiVora PWA - Versão Avançada
-const CACHE_NAME = 'lofivora-pwa-v5'; // Incrementando versão para forçar atualização
-const API_CACHE_NAME = 'lofivora-api-v3';
+const CACHE_NAME = 'lofivora-pwa-v7'; // Incrementando para forçar atualização do favicon
+const API_CACHE_NAME = 'lofivora-api-v4';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
 const STATIC_ASSETS = [
@@ -67,8 +67,16 @@ self.addEventListener('install', (event) => {
         broadcastProgress(80, 'installing');
         console.log('[SW] Nova versão instalada e pronta para ativação');
         
-        // Pular espera e ativar imediatamente
-        await self.skipWaiting();
+        // NÃO pular espera automaticamente - aguardar comando do usuário
+        // await self.skipWaiting(); - removido
+        
+        // Notificar que nova versão está disponível
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'UPDATE_AVAILABLE'
+          });
+        });
         
         // Fase 4: Conclusão (100%)
         broadcastProgress(100, 'installed');
@@ -323,9 +331,16 @@ async function syncTasks() {
     // Por exemplo, enviar tarefas pendentes para um servidor
     console.log('[SW] Sincronizando tarefas...');
     
-    // Simular sincronização
-    const tasks = JSON.parse(localStorage.getItem('lofivora-tasks') || '[]');
-    console.log('[SW] Tarefas para sincronizar:', tasks.length);
+    // Service Worker não tem acesso ao localStorage, então vamos usar uma alternativa
+    // ou comunicar com a main thread para obter os dados
+    console.log('[SW] Solicitando dados de tarefas da main thread...');
+    
+    const clients = await self.clients.matchAll();
+    if (clients.length > 0) {
+      clients[0].postMessage({
+        type: 'REQUEST_TASKS_SYNC'
+      });
+    }
     
   } catch (error) {
     console.error('[SW] Erro ao sincronizar tarefas:', error);
@@ -373,7 +388,9 @@ function startBackgroundTimer(data) {
   console.log('[SW] Configurando timer em background:', {
     timeLeft,
     mode,
-    activeTask: activeTask?.text || 'N/A'
+    activeTask: activeTask?.text || 'N/A',
+    timestamp: new Date().toISOString(),
+    isServiceWorkerActive: true
   });
 
   // Limpar timer anterior se existir
@@ -392,6 +409,8 @@ function startBackgroundTimer(data) {
     initialDuration: timeLeft  // Duração inicial para evitar bugs
   };
   
+  console.log('[SW] Estado inicial do timer:', timerState);
+  
   // Mostrar notificação inicial (silenciosa)
   showPersistentNotification();
   
@@ -401,12 +420,13 @@ function startBackgroundTimer(data) {
     const realElapsed = Math.floor((Date.now() - timerState.realStartTime) / 1000);
     timerState.timeLeft = Math.max(0, timerState.initialDuration - realElapsed);
     
-    // Log de debug a cada 30 segundos
-    if (realElapsed % 30 === 0) {
-      console.log('[SW] Timer executando:', {
+    // Log de debug a cada 30 segundos para mobile
+    if (realElapsed % 30 === 0 || realElapsed < 10) {
+      console.log('[SW] Timer executando (mobile debug):', {
         elapsed: realElapsed,
         timeLeft: timerState.timeLeft,
-        mode: timerState.mode
+        mode: timerState.mode,
+        timestamp: new Date().toISOString()
       });
     }
     
@@ -422,7 +442,11 @@ function startBackgroundTimer(data) {
     
   }, 1000);
   
-  console.log('[SW] Timer iniciado em background com sucesso:', timerState);
+  console.log('[SW] Timer iniciado em background com sucesso:', {
+    timerId: backgroundTimer,
+    state: timerState,
+    timestamp: new Date().toISOString()
+  });
 }
 
 function stopBackgroundTimer() {

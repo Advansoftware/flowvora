@@ -14,6 +14,11 @@ export const metadata = {
   title: 'LofiVora',
   description: 'Ambiente focado para produtividade com música lo-fi, chuva e técnica Pomodoro',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/icon-512.svg',
+  },
   keywords: ['pomodoro', 'produtividade', 'foco', 'lofi', 'chuva', 'música'],
   authors: [{ name: 'LofiVora' }],
   creator: 'LofiVora',
@@ -63,6 +68,11 @@ export default function RootLayout({ children }) {
         <meta name="msapplication-navbutton-color" content="#0f0f23" />
         <meta name="msapplication-TileColor" content="#0f0f23" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="shortcut icon" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/icon-512.svg" />
         
         {/* Fontes */}
         <link
