@@ -24,6 +24,12 @@ export const metadata = {
   creator: 'LofiVora',
   publisher: 'LofiVora',
   robots: 'index, follow',
+  // Cache busting para PWA
+  other: {
+    'cache-control': 'no-cache, no-store, must-revalidate',
+    'pragma': 'no-cache',
+    'expires': '0'
+  },
   openGraph: {
     title: 'LofiVora - Foco e Produtividade',
     description: 'Ambiente focado para produtividade com música lo-fi, chuva e técnica Pomodoro',
@@ -68,6 +74,11 @@ export default function RootLayout({ children }) {
         <meta name="msapplication-navbutton-color" content="#0f0f23" />
         <meta name="msapplication-TileColor" content="#0f0f23" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        
+        {/* Cache control para PWA */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
         
         {/* Favicon */}
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />

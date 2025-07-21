@@ -30,6 +30,9 @@ const UpdatePopover = () => {
 
   useEffect(() => {
     if (updateStatus.status === 'available' && mounted) {
+      // Detectar se é Android para comportamento mais agressivo
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
       // Criar um elemento virtual para posicionar o popover
       const virtualEl = {
         getBoundingClientRect: () => ({
@@ -42,10 +45,20 @@ const UpdatePopover = () => {
         }),
       };
       setAnchorEl(virtualEl);
+      
+      // No Android, auto-atualizar após 3 segundos se não interagir
+      if (isAndroid) {
+        const autoUpdateTimer = setTimeout(() => {
+          console.log('[UpdatePopover] Auto-atualizando no Android');
+          startUpdate();
+        }, 3000);
+        
+        return () => clearTimeout(autoUpdateTimer);
+      }
     } else {
       setAnchorEl(null);
     }
-  }, [updateStatus.status, mounted]);
+  }, [updateStatus.status, mounted, startUpdate]);
 
   const handleUpdate = () => {
     startUpdate();

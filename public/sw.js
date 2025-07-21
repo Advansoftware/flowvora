@@ -1,6 +1,6 @@
 // Service Worker para LofiVora PWA - Versão Avançada com suporte Android
-const CACHE_NAME = 'lofivora-pwa-v10'; // Android fullscreen PWA fix
-const API_CACHE_NAME = 'lofivora-api-v4';
+const CACHE_NAME = 'lofivora-pwa-v11'; // Nova versão com fixes de UI
+const API_CACHE_NAME = 'lofivora-api-v5';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
 const STATIC_ASSETS = [
@@ -9,6 +9,9 @@ const STATIC_ASSETS = [
   '/favicon.svg',
   '/icon-512.svg',
   '/meia-noite.png',
+  // Forçar recache de arquivos JS críticos
+  '/_next/static/chunks/app/page.js',
+  '/_next/static/chunks/pages/_app.js'
 ];
 
 // URLs que NÃO devem ser cachadas (requerem internet)
@@ -82,11 +85,14 @@ self.addEventListener('install', (event) => {
         // NÃO pular espera automaticamente - aguardar comando do usuário
         // await self.skipWaiting(); - removido
         
-        // Notificar que nova versão está disponível
+        // Notificar que nova versão está disponível - Android específico
         const clients = await self.clients.matchAll();
+        androidLog('Notificando clientes sobre nova versão:', clients.length);
+        
         clients.forEach(client => {
           client.postMessage({
-            type: 'UPDATE_AVAILABLE'
+            type: 'UPDATE_AVAILABLE',
+            forceUpdate: isAndroid() // Flag especial para Android
           });
         });
         
@@ -171,6 +177,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // Para arquivos JS críticos, usar network-first (Android específico)
+  const isJSFile = request.url.includes('.js') || request.url.includes('page');
+  const isAndroidPWA = isAndroid();
+  
+  if (isJSFile && isAndroidPWA) {
+    androidLog('Buscando arquivo JS com network-first:', request.url);
+    event.respondWith(
+      fetch(request).then((response) => {
+        if (response && response.status === 200) {
+          // Atualizar cache com nova versão
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+          return response;
+        }
+        // Fallback para cache se rede falhar
+        return caches.match(request);
+      }).catch(() => {
+        // Se rede falhar, usar cache
+        return caches.match(request);
+      })
+    );
+    return;
+  }
+  
   // Para outros recursos, usar estratégia cache-first
   if (request.method === 'GET') {
     event.respondWith(
@@ -191,18 +223,6 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone);
           });
-          
-          return response;
-        }).catch(() => {
-          // Se estiver offline e não tiver cache, retornar página offline
-          if (request.destination === 'document') {
-            return caches.match('/');
-          }
-        });
-      })
-    );
-  }
-});
 
 // Background Sync para tarefas
 self.addEventListener('sync', (event) => {
