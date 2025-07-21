@@ -22,6 +22,13 @@ export const usePWA = () => {
     activeTask: null
   });
 
+  // Estados de atualização do PWA
+  const [updateStatus, setUpdateStatus] = useState({
+    isUpdating: false,
+    progress: 0,
+    status: 'idle', // 'idle', 'checking', 'downloading', 'installing', 'completed'
+  });
+
   // Handler para mensagens do Service Worker
   const handleSWMessage = useCallback((event) => {
     const { type, data } = event.data || {};
@@ -41,6 +48,25 @@ export const usePWA = () => {
       case 'TIMER_PAUSED_FROM_NOTIFICATION':
         // Timer foi pausado via notificação
         window.dispatchEvent(new CustomEvent('timerPausedFromNotification'));
+        break;
+        
+      case 'UPDATE_PROGRESS':
+        // Progresso da atualização
+        setUpdateStatus(prev => ({
+          ...prev,
+          progress: data.progress,
+          status: data.status,
+          isUpdating: true
+        }));
+        break;
+        
+      case 'UPDATE_COMPLETED':
+        // Atualização concluída
+        setUpdateStatus({
+          isUpdating: true,
+          progress: 100,
+          status: 'completed'
+        });
         break;
         
       case 'SYNC_COMPLETE':
@@ -84,17 +110,67 @@ export const usePWA = () => {
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             if (newWorker) {
+              console.log('[PWA] Nova versão detectada, iniciando atualização automática');
+              
+              // Iniciar tela de atualização
+              setUpdateStatus({
+                isUpdating: true,
+                progress: 0,
+                status: 'downloading'
+              });
+
               newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // Novo Service Worker disponível
-                  console.log('[PWA] Nova versão disponível');
-                  if (confirm('Nova versão disponível! Deseja atualizar?')) {
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                  }
+                console.log('[PWA] Estado do novo worker:', newWorker.state);
+                
+                switch (newWorker.state) {
+                  case 'installing':
+                    setUpdateStatus(prev => ({
+                      ...prev,
+                      progress: 25,
+                      status: 'installing'
+                    }));
+                    break;
+                    
+                  case 'installed':
+                    setUpdateStatus(prev => ({
+                      ...prev,
+                      progress: 75,
+                      status: 'installing'
+                    }));
+                    
+                    if (navigator.serviceWorker.controller) {
+                      // Automaticamente ativar nova versão
+                      setTimeout(() => {
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      }, 1000);
+                    }
+                    break;
+                    
+                  case 'activated':
+                    setUpdateStatus({
+                      isUpdating: true,
+                      progress: 100,
+                      status: 'completed'
+                    });
+                    
+                    // Recarregar após mostrar conclusão
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 3000);
+                    break;
                 }
               });
             }
+          });
+
+          // Listener para quando o Service Worker for atualizado
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[PWA] Controller mudou, preparando reload');
+            setUpdateStatus(prev => ({
+              ...prev,
+              progress: 90,
+              status: 'installing'
+            }));
           });
         })
         .catch((error) => {
@@ -306,6 +382,23 @@ export const usePWA = () => {
     }
   }, [swRegistration]);
 
+  // Fechar tela de atualização
+  const completeUpdate = useCallback(() => {
+    setUpdateStatus({
+      isUpdating: false,
+      progress: 0,
+      status: 'idle'
+    });
+  }, []);
+
+  // Forçar verificação de atualização
+  const checkForUpdates = useCallback(async () => {
+    if (swRegistration) {
+      console.log('[PWA] Verificando atualizações...');
+      await swRegistration.update();
+    }
+  }, [swRegistration]);
+
   // Verificar se funcionalidades específicas estão disponíveis offline
   const isFeatureAvailableOffline = useCallback((feature) => {
     const offlineFeatures = ['tasks', 'pomodoro', 'scenes', 'storage'];
@@ -325,6 +418,9 @@ export const usePWA = () => {
     // Estados do timer em background
     backgroundTimer,
     
+    // Estados de atualização
+    updateStatus,
+    
     // Funções básicas
     installPWA,
     requestNotificationPermission,
@@ -338,6 +434,10 @@ export const usePWA = () => {
     stopBackgroundTimer,
     updateActiveTask,
     checkBackgroundTimer,
+    
+    // Funções de atualização
+    completeUpdate,
+    checkForUpdates,
     
     // Componentes de status
     showOfflineIndicator: showOfflineMessage,

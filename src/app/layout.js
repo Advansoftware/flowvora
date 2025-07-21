@@ -1,34 +1,53 @@
+import { Roboto } from 'next/font/google';
 import { ThemeProvider } from '../providers/ThemeProvider';
 import { TaskProvider } from '../contexts/TaskContext';
-import "./globals.css";
+import './globals.css';
+
+const roboto = Roboto({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto',
+});
 
 export const metadata = {
-  title: "LofiVora - Your Personal Lo-fi Focus Space",
-  description: "Uma aplicação web responsiva que simula uma rádio Lo-fi para foco e produtividade. Sinta-se calmo e imerso com nossa seleção de ambientes relaxantes.",
-  keywords: ["lo-fi", "foco", "produtividade", "música", "concentração", "relaxamento"],
-  authors: [{ name: "LofiVora Team" }],
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-    apple: [
-      { url: "/icon-512.svg", sizes: "180x180", type: "image/svg+xml" },
-    ],
-  },
+  title: 'LofiVora',
+  description: 'Ambiente focado para produtividade com música lo-fi, chuva e técnica Pomodoro',
+  manifest: '/manifest.json',
+  keywords: ['pomodoro', 'produtividade', 'foco', 'lofi', 'chuva', 'música'],
+  authors: [{ name: 'LofiVora' }],
+  creator: 'LofiVora',
+  publisher: 'LofiVora',
+  robots: 'index, follow',
   openGraph: {
-    title: "LofiVora - Your Personal Lo-fi Focus Space",
-    description: "Ambiente relaxante para foco e produtividade com música lo-fi",
-    type: "website",
+    title: 'LofiVora - Foco e Produtividade',
+    description: 'Ambiente focado para produtividade com música lo-fi, chuva e técnica Pomodoro',
+    url: 'https://lofivora.vercel.app',
+    siteName: 'LofiVora',
     images: [
       {
-        url: "/icon-512.svg",
+        url: '/icon-512.svg',
         width: 512,
         height: 512,
-        alt: "LofiVora Logo",
+        alt: 'LofiVora',
       },
     ],
+    locale: 'pt-BR',
+    type: 'website',
   },
-  manifest: "/manifest.json",
+  twitter: {
+    card: 'summary_large_image',
+    title: 'LofiVora - Foco e Produtividade',
+    description: 'Ambiente focado para produtividade com música lo-fi, chuva e técnica Pomodoro',
+    images: ['/icon-512.svg'],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'LofiVora',
+  },
+  applicationName: 'LofiVora',
+  category: 'productivity',
 };
 
 export default function RootLayout({ children }) {

@@ -1,6 +1,6 @@
 // Service Worker para LofiVora PWA - Versão Avançada
-const CACHE_NAME = 'flowvora-pwa-v3';
-const API_CACHE_NAME = 'lofivora-api-v2';
+const CACHE_NAME = 'lofivora-pwa-v5'; // Incrementando versão para forçar atualização
+const API_CACHE_NAME = 'lofivora-api-v3';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
 const STATIC_ASSETS = [
@@ -32,40 +32,107 @@ let timerState = {
   startTime: null
 };
 
+// Controle de atualização
+let updateAvailable = false;
+
 // Instalação do Service Worker
 self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando Service Worker...');
+  console.log('[SW] Instalando nova versão do Service Worker...');
   
+  // Enviar progresso da instalação
+  const broadcastProgress = (progress, status) => {
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'UPDATE_PROGRESS',
+          data: { progress, status }
+        });
+      });
+    });
+  };
+
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Cacheando arquivos estáticos...');
-      return cache.addAll(STATIC_ASSETS);
-    })
+    (async () => {
+      try {
+        // Fase 1: Abrir cache (10%)
+        broadcastProgress(10, 'installing');
+        const cache = await caches.open(CACHE_NAME);
+        
+        // Fase 2: Cachear arquivos (50%)
+        broadcastProgress(50, 'installing');
+        console.log('[SW] Cacheando arquivos estáticos...');
+        await cache.addAll(STATIC_ASSETS);
+        
+        // Fase 3: Finalizar instalação (80%)
+        broadcastProgress(80, 'installing');
+        console.log('[SW] Nova versão instalada e pronta para ativação');
+        
+        // Pular espera e ativar imediatamente
+        await self.skipWaiting();
+        
+        // Fase 4: Conclusão (100%)
+        broadcastProgress(100, 'installed');
+        
+      } catch (error) {
+        console.error('[SW] Erro durante instalação:', error);
+      }
+    })()
   );
-  
-  // Ativar imediatamente sem esperar
-  self.skipWaiting();
 });
 
 // Ativação do Service Worker
 self.addEventListener('activate', (event) => {
   console.log('[SW] Ativando Service Worker...');
   
+  // Enviar progresso da ativação
+  const broadcastProgress = (progress, status) => {
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'UPDATE_PROGRESS',
+          data: { progress, status }
+        });
+      });
+    });
+  };
+
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && cacheName !== API_CACHE_NAME) {
-            console.log('[SW] Removendo cache antigo:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    (async () => {
+      try {
+        // Fase 1: Limpeza de cache antigo (20%)
+        broadcastProgress(20, 'activating');
+        const cacheNames = await caches.keys();
+        
+        await Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME && cacheName !== API_CACHE_NAME) {
+              console.log('[SW] Removendo cache antigo:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+        
+        // Fase 2: Assumir controle (60%)
+        broadcastProgress(60, 'activating');
+        await self.clients.claim();
+        
+        // Fase 3: Notificar conclusão (100%)
+        broadcastProgress(100, 'completed');
+        console.log('[SW] Service Worker ativado e assumiu controle');
+        
+        // Enviar sinal de atualização completa
+        const clients = await self.clients.matchAll();
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'UPDATE_COMPLETED'
+          });
+        });
+        
+      } catch (error) {
+        console.error('[SW] Erro durante ativação:', error);
+      }
+    })()
   );
-  
-  // Assumir controle de todas as páginas
-  self.clients.claim();
 });
 
 // Interceptação de requests

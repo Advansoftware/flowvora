@@ -26,6 +26,7 @@ import ActiveTaskStatus from '../components/ActiveTaskStatus';
 import WelcomeModal from '../components/WelcomeModal';
 import AdSenseComponent from '../components/AdSenseComponent';
 import PWAStatus from '../components/PWAStatus';
+import PWAUpdateManager from '../components/PWAUpdateManager';
 import NoSSR from '../components/NoSSR';
 import { ADSENSE_CONFIG } from '../config/adsense';
 
@@ -147,6 +148,9 @@ function HomeContent() {
 
   return (
     <>
+      {/* Gerenciador de atualizações PWA */}
+      <PWAUpdateManager />
+      
       <Box
         sx={{
           minHeight: '100vh',
