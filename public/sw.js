@@ -269,24 +269,31 @@ async function syncTasks() {
 self.addEventListener('message', (event) => {
   const { type, data } = event.data || {};
   
+  console.log('[SW] Mensagem recebida:', { type, data });
+  
   switch (type) {
     case 'SKIP_WAITING':
       self.skipWaiting();
       break;
       
     case 'START_POMODORO_BACKGROUND':
+      console.log('[SW] Iniciando timer em background:', data);
       startBackgroundTimer(data);
       break;
       
     case 'STOP_POMODORO_BACKGROUND':
+      console.log('[SW] Parando timer em background');
       stopBackgroundTimer();
       break;
       
     case 'GET_TIMER_STATE':
-      event.ports[0].postMessage(getTimerState());
+      const state = getTimerState();
+      console.log('[SW] Enviando estado do timer:', state);
+      event.ports[0].postMessage(state);
       break;
       
     case 'UPDATE_ACTIVE_TASK':
+      console.log('[SW] Atualizando tarefa ativa:', data.activeTask);
       timerState.activeTask = data.activeTask;
       break;
   }
@@ -296,8 +303,15 @@ self.addEventListener('message', (event) => {
 function startBackgroundTimer(data) {
   const { timeLeft, mode, activeTask } = data;
   
+  console.log('[SW] Configurando timer em background:', {
+    timeLeft,
+    mode,
+    activeTask: activeTask?.text || 'N/A'
+  });
+
   // Limpar timer anterior se existir
   if (backgroundTimer) {
+    console.log('[SW] Limpando timer anterior');
     clearInterval(backgroundTimer);
   }
   
@@ -320,8 +334,18 @@ function startBackgroundTimer(data) {
     const realElapsed = Math.floor((Date.now() - timerState.realStartTime) / 1000);
     timerState.timeLeft = Math.max(0, timerState.initialDuration - realElapsed);
     
+    // Log de debug a cada 30 segundos
+    if (realElapsed % 30 === 0) {
+      console.log('[SW] Timer executando:', {
+        elapsed: realElapsed,
+        timeLeft: timerState.timeLeft,
+        mode: timerState.mode
+      });
+    }
+    
     // Quando terminar
     if (timerState.timeLeft <= 0) {
+      console.log('[SW] Timer completo, executando callback');
       handleTimerComplete();
       return;
     }
@@ -331,7 +355,7 @@ function startBackgroundTimer(data) {
     
   }, 1000);
   
-  console.log('[SW] Timer iniciado em background:', timerState);
+  console.log('[SW] Timer iniciado em background com sucesso:', timerState);
 }
 
 function stopBackgroundTimer() {

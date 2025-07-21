@@ -111,26 +111,51 @@ export const usePWA = () => {
 
   // Iniciar timer em background
   const startBackgroundTimer = useCallback((timeLeft, mode, activeTask) => {
+    console.log('[PWA] Tentando iniciar timer em background...', {
+      hasServiceWorker: 'serviceWorker' in navigator,
+      hasController: !!navigator.serviceWorker?.controller,
+      timeLeft,
+      mode
+    });
+
     if (!navigator.serviceWorker?.controller) {
       console.warn('[PWA] Service Worker não disponível para timer em background');
       return false;
     }
     
-    navigator.serviceWorker.controller.postMessage({
-      type: 'START_POMODORO_BACKGROUND',
-      data: { timeLeft, mode, activeTask }
-    });
-    
-    return true;
+    try {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'START_POMODORO_BACKGROUND',
+        data: { timeLeft, mode, activeTask }
+      });
+      
+      console.log('[PWA] Mensagem enviada para Service Worker');
+      return true;
+    } catch (error) {
+      console.error('[PWA] Erro ao enviar mensagem para Service Worker:', error);
+      return false;
+    }
   }, []);
 
   // Parar timer em background
   const stopBackgroundTimer = useCallback(() => {
-    if (!navigator.serviceWorker?.controller) return;
-    
-    navigator.serviceWorker.controller.postMessage({
-      type: 'STOP_POMODORO_BACKGROUND'
+    console.log('[PWA] Parando timer em background...', {
+      hasController: !!navigator.serviceWorker?.controller
     });
+
+    if (!navigator.serviceWorker?.controller) {
+      console.warn('[PWA] Service Worker não disponível para parar timer');
+      return;
+    }
+    
+    try {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'STOP_POMODORO_BACKGROUND'
+      });
+      console.log('[PWA] Comando de parada enviado para Service Worker');
+    } catch (error) {
+      console.error('[PWA] Erro ao parar timer em background:', error);
+    }
   }, []);
 
   // Atualizar tarefa ativa no background

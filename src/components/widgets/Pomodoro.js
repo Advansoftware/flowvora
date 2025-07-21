@@ -29,6 +29,7 @@ const Pomodoro = () => {
   const [useBackgroundTimer, setUseBackgroundTimer] = useState(true);
   const [timerStartTime, setTimerStartTime] = useState(null);
   const [initialTimeLeft, setInitialTimeLeft] = useState(25 * 60);
+  const [backgroundTimerAvailable, setBackgroundTimerAvailable] = useState(false);
   
   // Simular tarefa ativa por enquanto (depois será do contexto)
   const activeTask = useMemo(() => ({ 
@@ -70,6 +71,33 @@ const Pomodoro = () => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       requestNotificationPermission();
     }
+
+    // Verificar disponibilidade do Service Worker
+    const checkServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          if (registration && navigator.serviceWorker.controller) {
+            console.log('[Pomodoro] Service Worker disponível');
+            setBackgroundTimerAvailable(true);
+          } else {
+            console.log('[Pomodoro] Service Worker não disponível, usando timer local');
+            setBackgroundTimerAvailable(false);
+            setUseBackgroundTimer(false);
+          }
+        } catch (error) {
+          console.error('[Pomodoro] Erro ao verificar Service Worker:', error);
+          setBackgroundTimerAvailable(false);
+          setUseBackgroundTimer(false);
+        }
+      } else {
+        console.log('[Pomodoro] Service Worker não suportado');
+        setBackgroundTimerAvailable(false);
+        setUseBackgroundTimer(false);
+      }
+    };
+
+    checkServiceWorker();
 
     // Escutar eventos de notificação para iniciar próximo ciclo
     const handleStartNextCycle = (event) => {
@@ -169,7 +197,7 @@ const Pomodoro = () => {
 
   // Timer local (fallback quando background não disponível)
   useEffect(() => {
-    if (!useBackgroundTimer && isRunning && timeLeft > 0) {
+    if (isRunning && timeLeft > 0) {
       if (!timerStartTime) {
         setTimerStartTime(Date.now());
         setInitialTimeLeft(timeLeft);
@@ -178,13 +206,17 @@ const Pomodoro = () => {
       intervalRef.current = setInterval(() => {
         const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
         const newTimeLeft = Math.max(0, initialTimeLeft - elapsed);
-        setTimeLeft(newTimeLeft);
+        
+        // Se não estiver usando background timer, atualizar o timeLeft
+        if (!useBackgroundTimer) {
+          setTimeLeft(newTimeLeft);
+        }
         
         if (newTimeLeft <= 0) {
           handleTimerComplete();
         }
       }, 1000);
-    } else if (!useBackgroundTimer) {
+    } else {
       clearInterval(intervalRef.current);
       
       if (timeLeft === 0) {
@@ -200,6 +232,13 @@ const Pomodoro = () => {
   }, [isRunning, timeLeft, useBackgroundTimer, handleTimerComplete, timerStartTime, initialTimeLeft]);
 
   const startTimer = useCallback(() => {
+    console.log('[Pomodoro] Iniciando timer...', { 
+      useBackgroundTimer, 
+      hasServiceWorker: 'serviceWorker' in navigator,
+      timeLeft,
+      mode 
+    });
+
     // Enviar notificação de início
     const taskName = activeTask?.text || 'Tarefa';
     const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
@@ -211,26 +250,25 @@ const Pomodoro = () => {
       requireInteraction: false,
       icon: '/icon-512.svg',
       silent: true
-      // Removido actions para evitar erro - notificação de início é apenas informativa
     });
 
+    // Sempre configurar o estado local primeiro
+    setTimerStartTime(Date.now());
+    setInitialTimeLeft(timeLeft);
+    setIsRunning(true);
+
+    // Tentar usar background timer se disponível
     if (useBackgroundTimer && 'serviceWorker' in navigator) {
       const success = startBackgroundTimer(timeLeft, mode, activeTask);
       if (success) {
         updateActiveTask(activeTask);
-        setIsRunning(true);
-        setTimerStartTime(Date.now());
-        setInitialTimeLeft(timeLeft);
+        console.log('[Pomodoro] Timer em background iniciado');
       } else {
-        setUseBackgroundTimer(false);
-        setTimerStartTime(Date.now());
-        setInitialTimeLeft(timeLeft);
-        setIsRunning(true);
+        console.warn('[Pomodoro] Fallback para timer local - SW não disponível');
+        // Continua com timer local já configurado acima
       }
     } else {
-      setTimerStartTime(Date.now());
-      setInitialTimeLeft(timeLeft);
-      setIsRunning(true);
+      console.log('[Pomodoro] Usando timer local');
     }
   }, [useBackgroundTimer, startBackgroundTimer, timeLeft, mode, activeTask, updateActiveTask, sendNotification]);
 
@@ -242,63 +280,44 @@ const Pomodoro = () => {
     setTimerStartTime(null);
   }, [useBackgroundTimer, stopBackgroundTimer]);
 
-  const toggleTimer = () => {
-    if (useBackgroundTimer && 'serviceWorker' in navigator) {
-      if (isRunning) {
-        stopBackgroundTimer();
-        setIsRunning(false);
-        setTimerStartTime(null);
-      } else {
-        // Enviar notificação de início
-        const taskName = activeTask?.text || 'Tarefa';
-        const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
-        const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
-        
-        sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
-          body: `${taskName} • ${formatTime(timeLeft)}`,
-          tag: 'pomodoro-start',
-          requireInteraction: false,
-          icon: '/icon-512.svg',
-          silent: true
-          // Removido actions para evitar erro - notificação de início é apenas informativa
-        });
+    const toggleTimer = () => {
+    console.log('[Pomodoro] Toggle timer:', { isRunning, useBackgroundTimer });
 
+    if (isRunning) {
+      // Pausar timer
+      if (useBackgroundTimer) {
+        stopBackgroundTimer();
+      }
+      setIsRunning(false);
+      setTimerStartTime(null);
+    } else {
+      // Iniciar timer
+      const taskName = activeTask?.text || 'Tarefa';
+      const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
+      const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
+      
+      sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
+        body: `${taskName} • ${formatTime(timeLeft)}`,
+        tag: 'pomodoro-start',
+        requireInteraction: false,
+        icon: '/icon-512.svg',
+        silent: true
+      });
+
+      // Sempre configurar estado local primeiro
+      setTimerStartTime(Date.now());
+      setInitialTimeLeft(timeLeft);
+      setIsRunning(true);
+
+      // Tentar usar background timer se disponível
+      if (useBackgroundTimer && 'serviceWorker' in navigator) {
         const success = startBackgroundTimer(timeLeft, mode, activeTask);
         if (success) {
           updateActiveTask(activeTask);
-          setIsRunning(true);
-          setTimerStartTime(Date.now());
-          setInitialTimeLeft(timeLeft);
+          console.log('[Pomodoro] Timer em background iniciado via toggle');
         } else {
-          // Fallback para timer local
-          setUseBackgroundTimer(false);
-          setTimerStartTime(Date.now());
-          setInitialTimeLeft(timeLeft);
-          setIsRunning(true);
+          console.warn('[Pomodoro] Fallback para timer local via toggle');
         }
-      }
-    } else {
-      if (isRunning) {
-        setIsRunning(false);
-        setTimerStartTime(null);
-      } else {
-        // Enviar notificação de início para timer local também
-        const taskName = activeTask?.text || 'Tarefa';
-        const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
-        const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
-        
-        sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
-          body: `${taskName} • ${formatTime(timeLeft)}`,
-          tag: 'pomodoro-start',
-          requireInteraction: false,
-          icon: '/icon-512.svg',
-          silent: true
-          // Removido actions para evitar erro - notificação de início é apenas informativa
-        });
-
-        setTimerStartTime(Date.now());
-        setInitialTimeLeft(timeLeft);
-        setIsRunning(true);
       }
     }
   };
@@ -320,6 +339,11 @@ const Pomodoro = () => {
   };
 
   const toggleBackgroundTimer = () => {
+    if (!backgroundTimerAvailable) {
+      console.warn('[Pomodoro] Service Worker não disponível, não é possível alternar');
+      return;
+    }
+
     if (isRunning) {
       if (useBackgroundTimer) {
         stopBackgroundTimer();
@@ -387,18 +411,36 @@ const Pomodoro = () => {
               )}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Tooltip title={useBackgroundTimer ? "Timer em background ativo" : "Timer local"}>
+              <Tooltip title={
+                !backgroundTimerAvailable 
+                  ? "Service Worker indisponível - Timer local ativo"
+                  : useBackgroundTimer 
+                    ? "Timer em background ativo" 
+                    : "Timer local ativo"
+              }>
                 <IconButton
                   size="small"
                   onClick={toggleBackgroundTimer}
+                  disabled={!backgroundTimerAvailable}
                   sx={{
-                    color: useBackgroundTimer ? '#4caf50' : 'rgba(255, 255, 255, 0.5)',
+                    color: !backgroundTimerAvailable 
+                      ? 'rgba(255, 152, 0, 0.7)'
+                      : useBackgroundTimer 
+                        ? '#4caf50' 
+                        : 'rgba(255, 255, 255, 0.5)',
                     '&:hover': {
                       backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     },
+                    '&:disabled': {
+                      color: 'rgba(255, 152, 0, 0.5)',
+                    },
                   }}
                 >
-                  {useBackgroundTimer ? <Notifications /> : <NotificationsOff />}
+                  {!backgroundTimerAvailable 
+                    ? <NotificationsOff /> 
+                    : useBackgroundTimer 
+                      ? <Notifications /> 
+                      : <NotificationsOff />}
                 </IconButton>
               </Tooltip>
               <Chip
