@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 export const usePWA = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [swRegistration, setSwRegistration] = useState(null);
   const [notificationPermission, setNotificationPermission] = useState('default');
@@ -330,6 +331,7 @@ export const usePWA = () => {
     const handleAppInstalled = () => {
       setIsInstallable(false);
       setInstallPrompt(null);
+      setIsInstalled(true);
       console.log('[PWA] App instalado!');
     };
 
@@ -342,6 +344,71 @@ export const usePWA = () => {
     };
   }, []);
 
+  // Detectar se o PWA está instalado
+  const checkIsInstalled = useCallback(() => {
+    // Método 1: verificar se foi iniciado como PWA via URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const isFromPWA = urlParams.get('source') === 'pwa';
+    
+    // Método 2: verificar display-mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+    const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+    
+    // Método 3: verificar se é mobile app webview (iOS)
+    const isInWebAppiOS = window.navigator.standalone === true;
+    
+    // Método 4: verificar user agent para alguns casos específicos
+    const isTwitterInApp = navigator.userAgent.includes('Twitter');
+    const isFacebookInApp = navigator.userAgent.includes('FBAN') || navigator.userAgent.includes('FBAV');
+    
+    const installed = (isFromPWA || isStandalone || isFullscreen || isMinimalUI || isInWebAppiOS) && !isTwitterInApp && !isFacebookInApp;
+    
+    console.log('[PWA] Status de instalação:', {
+      isFromPWA,
+      isStandalone, 
+      isFullscreen,
+      isMinimalUI,
+      isInWebAppiOS,
+      isTwitterInApp,
+      isFacebookInApp,
+      installed
+    });
+    
+    setIsInstalled(installed);
+    return installed;
+  }, []);
+
+  // Verificar status de instalação no carregamento
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      checkIsInstalled();
+      
+      // Revalidar quando o display mode mudar
+      const mediaQueries = [
+        '(display-mode: fullscreen)',
+        '(display-mode: standalone)', 
+        '(display-mode: minimal-ui)'
+      ];
+      
+      const handleDisplayModeChange = () => {
+        setTimeout(checkIsInstalled, 100);
+      };
+      
+      const mediaQueryLists = mediaQueries.map(query => {
+        const mql = window.matchMedia(query);
+        mql.addEventListener('change', handleDisplayModeChange);
+        return mql;
+      });
+      
+      return () => {
+        mediaQueryLists.forEach(mql => {
+          mql.removeEventListener('change', handleDisplayModeChange);
+        });
+      };
+    }
+  }, [checkIsInstalled]);
+  
   // Verificar permissão de notificações
   useEffect(() => {
     if ('Notification' in window) {
@@ -474,6 +541,7 @@ export const usePWA = () => {
     // Estados
     isOnline,
     isInstallable,
+    isInstalled,
     notificationPermission,
     
     // Estados das mensagens
@@ -510,6 +578,9 @@ export const usePWA = () => {
     showOfflineIndicator: showOfflineMessage,
     canUseNotifications: 'Notification' in window,
     canInstall: isInstallable,
+    
+    // Nova função para revalidar status de instalação
+    checkIsInstalled,
   };
 };
 

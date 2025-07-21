@@ -30,6 +30,7 @@ import WelcomeModal from '../components/WelcomeModal';
 import AdSenseComponent from '../components/AdSenseComponent';
 import PWAStatus from '../components/PWAStatus';
 import PWAUpdateManager from '../components/PWAUpdateManager';
+import InstallBanner from '../components/InstallBanner';
 import NoSSR from '../components/NoSSR';
 import ActionButton from '../components/ui/ActionButton';
 import SettingsModal from '../components/modals/SettingsModal';
@@ -439,6 +440,9 @@ function HomeContent() {
           hideOfflineMessage={showWelcome} 
           onOpenSettings={() => setShowSettings(true)}
         />
+
+        {/* Banner de instalação do PWA */}
+        <InstallBanner />
 
         {/* Modal de Configurações */}
         <SettingsModal

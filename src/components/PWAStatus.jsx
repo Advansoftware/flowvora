@@ -24,6 +24,7 @@ export default function PWAStatus({ hideOfflineMessage = false, onOpenSettings }
   const {
     isOnline,
     isInstallable,
+    isInstalled,
     notificationPermission,
     showOnlineMessage,
     showOfflineMessage,
@@ -150,6 +151,20 @@ export default function PWAStatus({ hideOfflineMessage = false, onOpenSettings }
             }}
           >
             {isOnline ? <Wifi sx={{ fontSize: 16 }} /> : <WifiOff sx={{ fontSize: 16 }} />}
+          </Box>
+        </Tooltip>
+
+        {/* Status de instalação PWA */}
+        <Tooltip title={isInstalled ? 'Instalado como App' : 'Executando no navegador'}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              color: isInstalled ? '#4caf50' : '#ff9800',
+              fontSize: '14px',
+            }}
+          >
+            {isInstalled ? '📱' : '🌐'}
           </Box>
         </Tooltip>
 

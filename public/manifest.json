@@ -2,7 +2,7 @@
   "name": "LofiVora - Your Personal Lo-fi Focus Space",
   "short_name": "LofiVora",
   "description": "Ambiente relaxante para foco e produtividade com música lo-fi. Funciona offline para tarefas e Pomodoro!",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone", "minimal-ui"],
   "background_color": "#0f0f23",

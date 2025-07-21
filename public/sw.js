@@ -1,5 +1,5 @@
-// Service Worker para LofiVora PWA - Versão Avançada
-const CACHE_NAME = 'lofivora-pwa-v9'; // Fix para Android PWA timer
+// Service Worker para LofiVora PWA - Versão Avançada com suporte Android
+const CACHE_NAME = 'lofivora-pwa-v10'; // Android fullscreen PWA fix
 const API_CACHE_NAME = 'lofivora-api-v4';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
@@ -21,6 +21,18 @@ const NETWORK_ONLY_URLs = [
   '/doubleclick.net',
   '/adsystem.google',
 ];
+
+// Detectar se é Android para ajustes específicos
+const isAndroid = () => {
+  return /Android/i.test(self.navigator.userAgent || '');
+};
+
+// Log específico para Android
+const androidLog = (message, ...args) => {
+  if (isAndroid()) {
+    console.log('[SW-Android]', message, ...args);
+  }
+};
 
 // Timer global para Pomodoro em background
 let backgroundTimer = null;
@@ -404,9 +416,18 @@ function startBackgroundTimer(data) {
     userAgent: self.navigator?.userAgent || 'Unknown'
   });
 
+  // Log específico para Android
+  androidLog('Iniciando timer em background:', {
+    timeLeft,
+    mode,
+    isVisibilityAPISupported: typeof self.clients !== 'undefined',
+    timestampUTC: new Date().toUTCString()
+  });
+
   // Limpar timer anterior se existir
   if (backgroundTimer) {
     console.log('[SW] Limpando timer anterior');
+    androidLog('Limpando timer anterior - Android');
     clearInterval(backgroundTimer);
   }
   
@@ -419,10 +440,12 @@ function startBackgroundTimer(data) {
     startTime: Date.now(),
     realStartTime: Date.now(), // Tempo real de início
     initialDuration: timeLeft,  // Duração inicial para evitar bugs
-    lastUpdate: Date.now()      // Para detectar pausas/congelamentos
+    lastUpdate: Date.now(),     // Para detectar pausas/congelamentos
+    platform: isAndroid() ? 'android' : 'other'
   };
   
   console.log('[SW] Estado inicial do timer:', timerState);
+  androidLog('Estado inicial do timer Android:', timerState);
   
   // Mostrar notificação inicial (silenciosa)
   showPersistentNotification();
@@ -434,6 +457,11 @@ function startBackgroundTimer(data) {
     // Calcular tempo baseado no tempo real decorrido para evitar bugs de precisão
     const realElapsed = Math.floor((now - timerState.realStartTime) / 1000);
     const newTimeLeft = Math.max(0, timerState.initialDuration - realElapsed);
+    
+    // Log específico para Android a cada 10 segundos
+    if (isAndroid() && realElapsed % 10 === 0) {
+      androidLog(`Timer Android rodando: ${newTimeLeft}s restantes`);
+    }
     
     // Detectar possível congelamento/pausa (Android pode pausar timers)
     const timeSinceLastUpdate = now - timerState.lastUpdate;
