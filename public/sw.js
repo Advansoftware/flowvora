@@ -1,5 +1,5 @@
 // Service Worker para LofiVora PWA - Versão Avançada
-const CACHE_NAME = 'lofivora-pwa-v8'; // Fix para timer mobile PWA
+const CACHE_NAME = 'lofivora-pwa-v9'; // Fix para Android PWA timer
 const API_CACHE_NAME = 'lofivora-api-v4';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
@@ -358,6 +358,16 @@ self.addEventListener('message', (event) => {
       self.skipWaiting();
       break;
       
+    case 'CLAIM_CLIENTS':
+      // Específico para Android PWA - forçar assume controle
+      console.log('[SW] Forçando claim de clients para Android PWA');
+      self.clients.claim().then(() => {
+        console.log('[SW] Clients claimed com sucesso');
+      }).catch(error => {
+        console.error('[SW] Erro ao fazer claim:', error);
+      });
+      break;
+      
     case 'START_POMODORO_BACKGROUND':
       console.log('[SW] Iniciando timer em background:', data);
       startBackgroundTimer(data);
@@ -390,7 +400,8 @@ function startBackgroundTimer(data) {
     mode,
     activeTask: activeTask?.text || 'N/A',
     timestamp: new Date().toISOString(),
-    isServiceWorkerActive: true
+    isServiceWorkerActive: true,
+    userAgent: self.navigator?.userAgent || 'Unknown'
   });
 
   // Limpar timer anterior se existir
@@ -399,6 +410,7 @@ function startBackgroundTimer(data) {
     clearInterval(backgroundTimer);
   }
   
+  // Estado do timer com melhor precisão
   timerState = {
     isRunning: true,
     timeLeft: timeLeft,
@@ -406,7 +418,8 @@ function startBackgroundTimer(data) {
     activeTask: activeTask,
     startTime: Date.now(),
     realStartTime: Date.now(), // Tempo real de início
-    initialDuration: timeLeft  // Duração inicial para evitar bugs
+    initialDuration: timeLeft,  // Duração inicial para evitar bugs
+    lastUpdate: Date.now()      // Para detectar pausas/congelamentos
   };
   
   console.log('[SW] Estado inicial do timer:', timerState);
@@ -414,19 +427,37 @@ function startBackgroundTimer(data) {
   // Mostrar notificação inicial (silenciosa)
   showPersistentNotification();
   
-  // Iniciar novo timer
+  // Iniciar novo timer com melhor precisão
   backgroundTimer = setInterval(() => {
-    // Calcular tempo baseado no tempo real decorrido para evitar bugs de precisão
-    const realElapsed = Math.floor((Date.now() - timerState.realStartTime) / 1000);
-    timerState.timeLeft = Math.max(0, timerState.initialDuration - realElapsed);
+    const now = Date.now();
     
-    // Log de debug a cada 30 segundos para mobile
+    // Calcular tempo baseado no tempo real decorrido para evitar bugs de precisão
+    const realElapsed = Math.floor((now - timerState.realStartTime) / 1000);
+    const newTimeLeft = Math.max(0, timerState.initialDuration - realElapsed);
+    
+    // Detectar possível congelamento/pausa (Android pode pausar timers)
+    const timeSinceLastUpdate = now - timerState.lastUpdate;
+    if (timeSinceLastUpdate > 2500) { // Mais de 2.5s desde última atualização
+      console.warn('[SW] Possível congelamento detectado:', {
+        timeSinceLastUpdate,
+        lastUpdate: new Date(timerState.lastUpdate).toISOString(),
+        now: new Date(now).toISOString(),
+        realElapsed,
+        newTimeLeft
+      });
+    }
+    
+    timerState.timeLeft = newTimeLeft;
+    timerState.lastUpdate = now;
+    
+    // Log de debug a cada 30 segundos para mobile (reduzido para evitar spam)
     if (realElapsed % 30 === 0 || realElapsed < 10) {
       console.log('[SW] Timer executando (mobile debug):', {
         elapsed: realElapsed,
         timeLeft: timerState.timeLeft,
         mode: timerState.mode,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        userAgent: self.navigator?.userAgent?.includes('Android') ? 'Android' : 'Other'
       });
     }
     
@@ -437,7 +468,7 @@ function startBackgroundTimer(data) {
       return;
     }
     
-    // Enviar updates para a app se estiver aberta
+    // Enviar updates para a app se estiver aberta (throttled para Android)
     broadcastTimerUpdate();
     
   }, 1000);
@@ -602,14 +633,32 @@ function handleTimerComplete() {
   };
 }
 
+// Throttling para broadcast updates (evita spam no Android)
+let lastBroadcastTime = 0;
+const BROADCAST_THROTTLE_MS = 2000; // Broadcast a cada 2 segundos no máximo
+
 function broadcastTimerUpdate() {
+  const now = Date.now();
+  
+  // Throttle broadcasts para melhorar performance no Android
+  if (now - lastBroadcastTime < BROADCAST_THROTTLE_MS) {
+    return;
+  }
+  
+  lastBroadcastTime = now;
+  
   // Enviar update para todas as janelas abertas
   self.clients.matchAll({ type: 'window' }).then(clients => {
-    clients.forEach(client => {
-      client.postMessage({
-        type: 'TIMER_UPDATE',
-        data: getTimerState()
+    if (clients.length > 0) {
+      console.log('[SW] Broadcasting timer update para', clients.length, 'cliente(s)');
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'TIMER_UPDATE',
+          data: getTimerState()
+        });
       });
-    });
+    }
+  }).catch(error => {
+    console.error('[SW] Erro ao fazer broadcast:', error);
   });
 }
