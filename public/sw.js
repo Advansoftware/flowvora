@@ -1,6 +1,6 @@
 // Service Worker para LofiVora PWA - Versão Avançada com suporte Android
-const CACHE_NAME = 'lofivora-pwa-v11'; // Nova versão com fixes de UI
-const API_CACHE_NAME = 'lofivora-api-v5';
+const CACHE_NAME = 'lofivora-pwa-v12'; // Nova versão com arquitetura componentizada do Pomodoro
+const API_CACHE_NAME = 'lofivora-api-v6';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
 const STATIC_ASSETS = [
