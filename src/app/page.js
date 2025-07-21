@@ -10,6 +10,9 @@ import {
   Fade,
   Typography,
 } from '@mui/material';
+import { 
+  Settings,
+} from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 // Context
@@ -28,6 +31,8 @@ import AdSenseComponent from '../components/AdSenseComponent';
 import PWAStatus from '../components/PWAStatus';
 import PWAUpdateManager from '../components/PWAUpdateManager';
 import NoSSR from '../components/NoSSR';
+import ActionButton from '../components/ui/ActionButton';
+import SettingsModal from '../components/modals/SettingsModal';
 import { ADSENSE_CONFIG } from '../config/adsense';
 
 // Componente principal que utiliza o contexto
@@ -39,6 +44,7 @@ function HomeContent() {
   const [showWelcome, setShowWelcome] = useState(true); // SEMPRE mostrar o modal inicialmente
   const [showMainContent, setShowMainContent] = useState(false);
   const [hasStartedExperience, setHasStartedExperience] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const visualFrameRef = useRef(null);
 
   useEffect(() => {
@@ -429,7 +435,16 @@ function HomeContent() {
         </Container>
 
         {/* Status PWA - esconder mensagem offline durante welcome */}
-        <PWAStatus hideOfflineMessage={showWelcome} />
+        <PWAStatus 
+          hideOfflineMessage={showWelcome} 
+          onOpenSettings={() => setShowSettings(true)}
+        />
+
+        {/* Modal de Configurações */}
+        <SettingsModal
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+        />
 
         {/* Overlay de fundo para criar profundidade */}
         <Box

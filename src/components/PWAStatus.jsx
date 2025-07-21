@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,10 +16,11 @@ import {
   GetApp,
   Notifications,
   NotificationsOff,
+  Settings,
 } from '@mui/icons-material';
 import { usePWA } from '../hooks/usePWA';
 
-export default function PWAStatus({ hideOfflineMessage = false }) {
+export default function PWAStatus({ hideOfflineMessage = false, onOpenSettings }) {
   const {
     isOnline,
     isInstallable,
@@ -30,6 +31,46 @@ export default function PWAStatus({ hideOfflineMessage = false }) {
     requestNotificationPermission,
     canInstall,
   } = usePWA();
+
+  const [storageStatus, setStorageStatus] = useState('checking');
+
+  useEffect(() => {
+    const checkStorageStatus = async () => {
+      try {
+        if (typeof window !== 'undefined' && 'indexedDB' in window) {
+          setStorageStatus('indexeddb');
+        } else {
+          setStorageStatus('localstorage');
+        }
+      } catch (error) {
+        setStorageStatus('localstorage');
+      }
+    };
+
+    checkStorageStatus();
+  }, []);
+
+  const getStorageIcon = () => {
+    switch (storageStatus) {
+      case 'indexeddb':
+        return '💾';
+      case 'localstorage':
+        return '💿';
+      default:
+        return '⌛';
+    }
+  };
+
+  const getStorageTooltip = () => {
+    switch (storageStatus) {
+      case 'indexeddb':
+        return 'Usando IndexedDB (armazenamento avançado)';
+      case 'localstorage':
+        return 'Usando LocalStorage (armazenamento básico)';
+      default:
+        return 'Verificando tipo de armazenamento...';
+    }
+  };
 
   return (
     <>
@@ -112,6 +153,20 @@ export default function PWAStatus({ hideOfflineMessage = false }) {
           </Box>
         </Tooltip>
 
+        {/* Status do armazenamento */}
+        <Tooltip title={getStorageTooltip()}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              color: storageStatus === 'indexeddb' ? '#4caf50' : '#ff9800',
+              fontSize: '14px',
+            }}
+          >
+            {getStorageIcon()}
+          </Box>
+        </Tooltip>
+
         {/* Status de notificações */}
         {typeof window !== 'undefined' && 'Notification' in window && (
           <Tooltip title={
@@ -132,6 +187,25 @@ export default function PWAStatus({ hideOfflineMessage = false }) {
               ) : (
                 <NotificationsOff sx={{ fontSize: 16 }} />
               )}
+            </IconButton>
+          </Tooltip>
+        )}
+
+        {/* Botão de configurações */}
+        {onOpenSettings && (
+          <Tooltip title="Configurações">
+            <IconButton
+              size="small"
+              onClick={onOpenSettings}
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                padding: '2px',
+                '&:hover': {
+                  color: '#6366f1',
+                }
+              }}
+            >
+              <Settings sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
         )}

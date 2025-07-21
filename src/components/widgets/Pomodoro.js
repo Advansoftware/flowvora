@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useContext, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
-  IconButton,
   LinearProgress,
   Chip,
   Stack,
@@ -16,8 +15,18 @@ import {
   Refresh,
 } from '@mui/icons-material';
 import { usePWA } from '../../hooks/usePWA';
+import { useSettings } from '../../hooks/useSettings';
+import { storageService } from '../../services/storageNew.js';
+import ActionButton from '../ui/ActionButton.jsx';
 
 const Pomodoro = () => {
+  const { getPomodoroTimes } = useSettings();
+  const [pomodoroTimes, setPomodoroTimes] = useState({
+    focus: 25,
+    shortBreak: 5,
+    longBreak: 15
+  });
+  
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [mode, setMode] = useState('focus');
@@ -26,32 +35,41 @@ const Pomodoro = () => {
   const [timerStartTime, setTimerStartTime] = useState(null);
   const [initialTimeLeft, setInitialTimeLeft] = useState(25 * 60);
   
-  // Buscar tarefa ativa do localStorage
+  // Buscar tarefa ativa do storage
   const [activeTask, setActiveTask] = useState(null);
+
+  // Carregar configurações do Pomodoro uma vez
+  useEffect(() => {
+    const loadPomodoroTimes = async () => {
+      const times = getPomodoroTimes();
+      setPomodoroTimes(times);
+      
+      // Definir tempo inicial para o modo focus (padrão)
+      const focusTime = times.focus || 25;
+      setTimeLeft(focusTime * 60);
+      setInitialTimeLeft(focusTime * 60);
+    };
+    
+    loadPomodoroTimes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Executar apenas uma vez na inicialização
   
   // Atualizar tarefa ativa
   useEffect(() => {
-    const updateActiveTask = () => {
-      if (typeof window !== 'undefined') {
-        const savedTasks = localStorage.getItem('lofivora-tasks');
-        if (savedTasks) {
-          try {
-            const tasks = JSON.parse(savedTasks);
-            const active = tasks.find(task => task.status === 'in-progress' && !task.completed);
-            setActiveTask(active || null);
-          } catch (error) {
-            console.error('Erro ao carregar tarefa ativa:', error);
-          }
-        } else {
-          setActiveTask(null);
-        }
+    const updateActiveTask = async () => {
+      try {
+        const tasks = await storageService.getTasks();
+        const active = tasks.find(task => task.status === 'in-progress' && !task.completed);
+        setActiveTask(active || null);
+      } catch (error) {
+        console.error('Erro ao carregar tarefa ativa:', error);
       }
     };
 
     // Atualizar imediatamente
     updateActiveTask();
 
-    // Verificar mudanças no localStorage
+    // Verificar mudanças periodicamente
     const interval = setInterval(updateActiveTask, 2000);
     
     return () => clearInterval(interval);
@@ -64,10 +82,10 @@ const Pomodoro = () => {
   } = usePWA();
 
   const modes = useMemo(() => ({
-    focus: { duration: 25 * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
-    shortBreak: { duration: 5 * 60, label: 'Pausa', emoji: '☕', color: '#4caf50' },
-    longBreak: { duration: 15 * 60, label: 'Descanso', emoji: '🌟', color: '#2196f3' },
-  }), []);
+    focus: { duration: pomodoroTimes.focus * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
+    shortBreak: { duration: pomodoroTimes.shortBreak * 60, label: 'Pausa', emoji: '☕', color: '#4caf50' },
+    longBreak: { duration: pomodoroTimes.longBreak * 60, label: 'Descanso', emoji: '🌟', color: '#2196f3' },
+  }), [pomodoroTimes]);
 
   // Definir changeMode antes dos useEffects que o utilizam
   const changeMode = useCallback((newMode) => {
@@ -174,10 +192,24 @@ const Pomodoro = () => {
 
   // Timer principal - totalmente front-end, precisão de segundo
   useEffect(() => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+    
+    console.log('[Pomodoro Debug] Timer effect triggered:', {
+      isRunning,
+      timeLeft,
+      timerStartTime,
+      isAndroid,
+      isPWA,
+      hasUserActivation: navigator.userActivation?.hasBeenActive || false
+    });
+
     if (isRunning && timeLeft > 0) {
       if (!timerStartTime) {
-        setTimerStartTime(Date.now());
+        const startTime = Date.now();
+        setTimerStartTime(startTime);
         setInitialTimeLeft(timeLeft);
+        console.log('[Pomodoro Debug] Timer started at:', new Date(startTime).toISOString());
       }
       
       intervalRef.current = setInterval(() => {
@@ -185,24 +217,34 @@ const Pomodoro = () => {
         const elapsed = Math.floor((now - timerStartTime) / 1000);
         const newTimeLeft = Math.max(0, initialTimeLeft - elapsed);
         
+        console.log('[Pomodoro Debug] Timer tick:', {
+          now: new Date(now).toISOString(),
+          elapsed,
+          newTimeLeft,
+          initialTimeLeft,
+          timerStartTime: new Date(timerStartTime).toISOString()
+        });
+        
         // Atualizar timeLeft com precisão
         setTimeLeft(newTimeLeft);
         
         // Verificar se terminou
         if (newTimeLeft <= 0) {
-          console.log('[Pomodoro] Timer completo');
+          console.log('[Pomodoro Debug] Timer completo');
           handleTimerComplete();
           return;
         }
-      }, 100); // Atualizar a cada 100ms para suavidade visual
+      }, 1000); // Mudei para 1 segundo para debug mais claro
     } else {
       if (intervalRef.current) {
+        console.log('[Pomodoro Debug] Clearing interval');
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
       
       // Se parou e chegou a zero, executar callback
       if (timeLeft === 0 && !isRunning) {
+        console.log('[Pomodoro Debug] Timer reached zero, completing');
         handleTimerComplete();
       }
       
@@ -214,6 +256,7 @@ const Pomodoro = () => {
 
     return () => {
       if (intervalRef.current) {
+        console.log('[Pomodoro Debug] Cleanup: clearing interval');
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
@@ -221,9 +264,17 @@ const Pomodoro = () => {
   }, [isRunning, timeLeft, handleTimerComplete, timerStartTime, initialTimeLeft]);
 
   const startTimer = useCallback(() => {
-    console.log('[Pomodoro] Iniciando timer front-end...', { 
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+    
+    console.log('[Pomodoro Debug] Starting timer:', { 
       timeLeft,
-      mode 
+      mode,
+      isAndroid,
+      isPWA,
+      hasUserActivation: navigator.userActivation?.hasBeenActive || false,
+      visibilityState: document.visibilityState,
+      hasFocus: document.hasFocus()
     });
 
     // Enviar notificação de início
@@ -240,19 +291,30 @@ const Pomodoro = () => {
     });
 
     // Configurar o estado local
-    setTimerStartTime(Date.now());
+    const startTime = Date.now();
+    setTimerStartTime(startTime);
     setInitialTimeLeft(timeLeft);
     setIsRunning(true);
+    
+    console.log('[Pomodoro Debug] Timer state set:', {
+      timerStartTime: new Date(startTime).toISOString(),
+      initialTimeLeft: timeLeft,
+      isRunning: true
+    });
   }, [timeLeft, mode, activeTask, sendNotification]);
 
   const pauseTimer = useCallback(() => {
-    console.log('[Pomodoro] Pausando timer front-end...');
+    console.log('[Pomodoro Debug] Pausando timer front-end...');
     setIsRunning(false);
     setTimerStartTime(null);
   }, []);
 
   const toggleTimer = () => {
-    console.log('[Pomodoro] Toggle timer:', { isRunning });
+    console.log('[Pomodoro Debug] Toggle timer:', { 
+      isRunning, 
+      timeLeft,
+      hasIntervalRef: !!intervalRef.current 
+    });
 
     if (isRunning) {
       // Pausar timer
@@ -385,36 +447,20 @@ const Pomodoro = () => {
 
           {/* Controles compactos */}
           <Stack direction="row" spacing={1} justifyContent="center">
-            <IconButton
+            <ActionButton
               onClick={toggleTimer}
-              sx={{
-                backgroundColor: `${currentMode.color}20`,
-                border: `2px solid ${currentMode.color}`,
-                color: currentMode.color,
-                width: 40,
-                height: 40,
-                '&:hover': {
-                  backgroundColor: `${currentMode.color}30`,
-                },
-              }}
+              variant="primary"
+              color={currentMode.color}
             >
               {isRunning ? <Pause /> : <PlayArrow />}
-            </IconButton>
+            </ActionButton>
 
-            <IconButton
+            <ActionButton
               onClick={resetTimer}
-              sx={{
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'rgba(255, 255, 255, 0.7)',
-                width: 40,
-                height: 40,
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                },
-              }}
+              variant="secondary"
             >
               <Refresh />
-            </IconButton>
+            </ActionButton>
           </Stack>
 
           {/* Seleção de modo */}
