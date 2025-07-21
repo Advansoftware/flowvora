@@ -26,7 +26,7 @@ const Pomodoro = () => {
   const [mode, setMode] = useState('focus');
   const [cycles, setCycles] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const [useBackgroundTimer, setUseBackgroundTimer] = useState(true);
+  const [useBackgroundTimer, setUseBackgroundTimer] = useState(false); // Iniciar como false
   const [timerStartTime, setTimerStartTime] = useState(null);
   const [initialTimeLeft, setInitialTimeLeft] = useState(25 * 60);
   const [backgroundTimerAvailable, setBackgroundTimerAvailable] = useState(false);
@@ -101,15 +101,33 @@ const Pomodoro = () => {
     const checkServiceWorker = async () => {
       if ('serviceWorker' in navigator) {
         try {
+          // Aguardar o service worker estar realmente pronto
           const registration = await navigator.serviceWorker.ready;
-          if (registration && navigator.serviceWorker.controller) {
-            console.log('[Pomodoro] Service Worker disponível');
-            setBackgroundTimerAvailable(true);
-          } else {
-            console.log('[Pomodoro] Service Worker não disponível, usando timer local');
-            setBackgroundTimerAvailable(false);
-            setUseBackgroundTimer(false);
-          }
+          
+          // Dar um tempo para o controller ser definido no mobile
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          const waitForController = async () => {
+            if (navigator.serviceWorker.controller || attempts >= maxAttempts) {
+              if (navigator.serviceWorker.controller) {
+                console.log('[Pomodoro] Service Worker disponível');
+                setBackgroundTimerAvailable(true);
+                setUseBackgroundTimer(true);
+              } else {
+                console.log('[Pomodoro] Service Worker sem controller após tentativas, usando timer local');
+                setBackgroundTimerAvailable(false);
+                setUseBackgroundTimer(false);
+              }
+              return;
+            }
+            
+            attempts++;
+            setTimeout(waitForController, 100);
+          };
+          
+          waitForController();
+          
         } catch (error) {
           console.error('[Pomodoro] Erro ao verificar Service Worker:', error);
           setBackgroundTimerAvailable(false);
@@ -220,7 +238,7 @@ const Pomodoro = () => {
     setTimerStartTime(null);
   }, [mode, activeTask, sendNotification, modes, cycles]);
 
-  // Timer local (fallback quando background não disponível)
+  // Timer local (sempre ativo como fallback)
   useEffect(() => {
     if (isRunning && timeLeft > 0) {
       if (!timerStartTime) {
@@ -232,13 +250,12 @@ const Pomodoro = () => {
         const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
         const newTimeLeft = Math.max(0, initialTimeLeft - elapsed);
         
-        // Se não estiver usando background timer, atualizar o timeLeft
-        if (!useBackgroundTimer) {
-          setTimeLeft(newTimeLeft);
-        }
+        // SEMPRE atualizar timeLeft no timer local (background timer override isso se necessário)
+        setTimeLeft(newTimeLeft);
         
         if (newTimeLeft <= 0) {
           handleTimerComplete();
+          return;
         }
       }, 1000);
     } else {
@@ -254,7 +271,7 @@ const Pomodoro = () => {
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, timeLeft, useBackgroundTimer, handleTimerComplete, timerStartTime, initialTimeLeft]);
+  }, [isRunning, timeLeft, handleTimerComplete, timerStartTime, initialTimeLeft]);
 
   const startTimer = useCallback(() => {
     console.log('[Pomodoro] Iniciando timer...', { 
@@ -316,34 +333,8 @@ const Pomodoro = () => {
       setIsRunning(false);
       setTimerStartTime(null);
     } else {
-      // Iniciar timer
-      const taskName = activeTask?.text || 'Tarefa';
-      const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
-      const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
-      
-      sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
-        body: `${taskName} • ${formatTime(timeLeft)}`,
-        tag: 'pomodoro-start',
-        requireInteraction: false,
-        icon: '/icon-512.svg',
-        silent: true
-      });
-
-      // Sempre configurar estado local primeiro
-      setTimerStartTime(Date.now());
-      setInitialTimeLeft(timeLeft);
-      setIsRunning(true);
-
-      // Tentar usar background timer se disponível
-      if (useBackgroundTimer && 'serviceWorker' in navigator) {
-        const success = startBackgroundTimer(timeLeft, mode, activeTask);
-        if (success) {
-          updateActiveTask(activeTask);
-          console.log('[Pomodoro] Timer em background iniciado via toggle');
-        } else {
-          console.warn('[Pomodoro] Fallback para timer local via toggle');
-        }
-      }
+      // Iniciar timer - SEMPRE usar a função startTimer para garantir que funcione
+      startTimer();
     }
   };
 

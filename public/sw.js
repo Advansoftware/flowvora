@@ -1,5 +1,5 @@
 // Service Worker para LofiVora PWA - Versão Avançada
-const CACHE_NAME = 'lofivora-pwa-v7'; // Incrementando para forçar atualização do favicon
+const CACHE_NAME = 'lofivora-pwa-v8'; // Fix para timer mobile PWA
 const API_CACHE_NAME = 'lofivora-api-v4';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
