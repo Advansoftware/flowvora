@@ -8,6 +8,11 @@ export const usePWA = () => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [swRegistration, setSwRegistration] = useState(null);
   const [notificationPermission, setNotificationPermission] = useState('default');
+  
+  // Estados para mensagens temporárias
+  const [showOnlineMessage, setShowOnlineMessage] = useState(false);
+  const [showOfflineMessage, setShowOfflineMessage] = useState(false);
+  const [previousOnlineState, setPreviousOnlineState] = useState(true);
 
   // Registrar Service Worker
   useEffect(() => {
@@ -43,10 +48,30 @@ export const usePWA = () => {
 
   // Monitorar status online/offline
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Só mostrar mensagem se estava offline antes
+      if (!previousOnlineState) {
+        setShowOnlineMessage(true);
+        setShowOfflineMessage(false);
+        // Esconder mensagem após 3 segundos
+        setTimeout(() => setShowOnlineMessage(false), 3000);
+      }
+      setPreviousOnlineState(true);
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      setShowOfflineMessage(true);
+      setShowOnlineMessage(false);
+      setPreviousOnlineState(false);
+    };
 
-    setIsOnline(navigator.onLine);
+    // Estado inicial
+    const initialState = navigator.onLine;
+    setIsOnline(initialState);
+    setPreviousOnlineState(initialState);
+    
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
@@ -54,7 +79,7 @@ export const usePWA = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [previousOnlineState]);
 
   // Detectar prompt de instalação
   useEffect(() => {
@@ -155,6 +180,10 @@ export const usePWA = () => {
     isInstallable,
     notificationPermission,
     
+    // Estados das mensagens
+    showOnlineMessage,
+    showOfflineMessage,
+    
     // Funções
     installPWA,
     requestNotificationPermission,
@@ -164,7 +193,7 @@ export const usePWA = () => {
     isFeatureAvailableOffline,
     
     // Componentes de status
-    showOfflineIndicator: !isOnline,
+    showOfflineIndicator: showOfflineMessage,
     canUseNotifications: 'Notification' in window,
     canInstall: isInstallable,
   };

@@ -24,17 +24,18 @@ export default function PWAStatus() {
     isOnline,
     isInstallable,
     notificationPermission,
+    showOnlineMessage,
+    showOfflineMessage,
     installPWA,
     requestNotificationPermission,
     canInstall,
-    showOfflineIndicator,
   } = usePWA();
 
   return (
     <>
       {/* Indicador de status offline */}
       <Snackbar
-        open={showOfflineIndicator}
+        open={showOfflineMessage}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         sx={{ zIndex: 9999 }}
       >
@@ -60,7 +61,7 @@ export default function PWAStatus() {
 
       {/* Indicador de status online */}
       <Snackbar
-        open={isOnline}
+        open={showOnlineMessage}
         autoHideDuration={3000}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         sx={{ zIndex: 9999 }}
