@@ -22,9 +22,8 @@ export default function VisualFrame() {
   const [currentScene, setCurrentScene] = useState(0);
   const [imageError, setImageError] = useState(false);
   
-  // Refs para controlar os players YouTube
-  const videoPlayerRef = useRef(null);
-  const audioPlayerRef = useRef(null);
+  // Apenas uma ref para o player ativo
+  const activePlayerRef = useRef(null);
 
   // Opções do YouTube player - removendo opções que causam problemas
   const youtubeOpts = {
@@ -47,14 +46,9 @@ export default function VisualFrame() {
   };
 
   // Eventos do YouTube player
-  const handlePlayerReady = (event, isAudio = false) => {
+  const handlePlayerReady = (event) => {
     const player = event.target;
-    if (isAudio) {
-      audioPlayerRef.current = player;
-    } else {
-      videoPlayerRef.current = player;
-    }
-    
+    activePlayerRef.current = player;
     onPlayerReady(player);
   };
 
@@ -64,9 +58,8 @@ export default function VisualFrame() {
     // Quando o vídeo terminar, recarregar para evitar sugestões
     if (event.data === 0) { // 0 = ended
       setTimeout(() => {
-        const player = displayMode === 'video' ? videoPlayerRef.current : audioPlayerRef.current;
-        if (player) {
-          player.playVideo();
+        if (activePlayerRef.current) {
+          activePlayerRef.current.playVideo();
         }
       }, 1000);
     }
@@ -106,70 +99,39 @@ export default function VisualFrame() {
         backgroundColor: '#000',
       }}
     >
-      {/* YouTube Player para modo vídeo */}
+      {/* YouTube Player único que muda de posição conforme o modo */}
       <Box
         sx={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
+          top: displayMode === 'video' ? 0 : '-9999px',
+          left: displayMode === 'video' ? 0 : '-9999px',
+          width: displayMode === 'video' ? '100%' : '1px',
+          height: displayMode === 'video' ? '100%' : '1px',
           opacity: displayMode === 'video' ? 1 : 0,
           pointerEvents: 'none', // Tornar não clicável
-          transition: 'opacity 0.5s ease',
+          transition: displayMode === 'video' ? 'opacity 0.5s ease' : 'none',
+          overflow: 'hidden',
           '& iframe': {
-            width: '100%',
-            height: '100%',
+            width: displayMode === 'video' ? '100%' : '1px',
+            height: displayMode === 'video' ? '100%' : '1px',
             pointerEvents: 'none', // Garantir que o iframe não seja clicável
           },
         }}
       >
         <YouTube
-          videoId={currentVideo}
-          opts={youtubeOpts}
-          onReady={(event) => handlePlayerReady(event, false)}
-          onStateChange={handleStateChange}
-          style={{ 
-            width: '100%', 
-            height: '100%',
-            pointerEvents: 'none'
-          }}
-        />
-      </Box>
-
-      {/* YouTube Player oculto para modo áudio */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '1px',
-          height: '1px',
-          opacity: 0,
-          pointerEvents: 'none',
-          visibility: displayMode === 'image' ? 'visible' : 'hidden',
-          overflow: 'hidden',
-          '& iframe': {
-            width: '1px',
-            height: '1px',
-          },
-        }}
-      >
-        <YouTube
+          key={`${currentVideo}-${displayMode}`} // Force re-render quando mudar modo ou vídeo
           videoId={currentVideo}
           opts={{
             ...youtubeOpts,
-            height: '1',
-            width: '1',
+            height: displayMode === 'video' ? '100%' : '1',
+            width: displayMode === 'video' ? '100%' : '1',
           }}
-          onReady={(event) => handlePlayerReady(event, true)}
+          onReady={handlePlayerReady}
           onStateChange={handleStateChange}
           style={{ 
-            width: '1px', 
-            height: '1px',
-            position: 'absolute',
-            top: '-9999px',
-            left: '-9999px',
+            width: displayMode === 'video' ? '100%' : '1px', 
+            height: displayMode === 'video' ? '100%' : '1px',
+            pointerEvents: 'none'
           }}
         />
       </Box>

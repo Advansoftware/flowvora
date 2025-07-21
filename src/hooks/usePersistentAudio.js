@@ -105,17 +105,22 @@ export const usePersistentAudio = () => {
 
   // Configurar player quando ele estiver pronto
   const onPlayerReady = useCallback((player) => {
+    console.log('Player pronto, configurando...', { volume, isMuted, currentVideo });
     playerRef.current = player;
     setIsReady(true);
     
     // Aplicar configurações salvas
     if (player) {
-      player.setVolume(isMuted ? 0 : volume);
+      // Aplicar volume
+      const actualVolume = isMuted ? 0 : volume;
+      player.setVolume(actualVolume);
+      console.log('Volume inicial aplicado:', actualVolume);
       
       // Recuperar posição salva para este vídeo
       const savedPosition = getVideoPosition(currentVideo);
       if (savedPosition > 0) {
         player.seekTo(savedPosition, true);
+        console.log('Posição restaurada:', savedPosition);
       }
       
       // NUNCA tocar automaticamente - sempre aguardar interação do usuário
@@ -128,6 +133,8 @@ export const usePersistentAudio = () => {
     markUserInteraction(); // Marcar interação
     
     if (playerRef.current && isReady) {
+      console.log('Toggle play/pause - Estado atual:', isPlaying, 'Player pronto:', isReady);
+      
       if (isPlaying) {
         // Salvar posição atual antes de pausar
         const currentTime = playerRef.current.getCurrentTime();
@@ -135,10 +142,18 @@ export const usePersistentAudio = () => {
         
         playerRef.current.pauseVideo();
         setIsPlaying(false);
+        console.log('Pausando player');
       } else {
         playerRef.current.playVideo();
         setIsPlaying(true);
+        console.log('Iniciando player');
       }
+    } else {
+      console.warn('Player não está pronto ou não existe:', { 
+        playerExists: !!playerRef.current, 
+        isReady,
+        isPlaying 
+      });
     }
   }, [isPlaying, isReady, markUserInteraction, saveVideoPosition, currentVideo]);
 
@@ -180,7 +195,14 @@ export const usePersistentAudio = () => {
     setVolume(clampedVolume);
     
     if (playerRef.current && isReady) {
-      playerRef.current.setVolume(isMuted ? 0 : clampedVolume);
+      // Se está mutado, não aplicar volume
+      if (isMuted) {
+        playerRef.current.setVolume(0);
+      } else {
+        // Aplicar volume diretamente
+        playerRef.current.setVolume(clampedVolume);
+      }
+      console.log('Volume aplicado:', isMuted ? 0 : clampedVolume);
     }
   }, [isMuted, isReady]);
 
