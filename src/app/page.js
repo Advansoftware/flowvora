@@ -25,6 +25,7 @@ import RainEffect from '../components/RainEffect';
 import ActiveTaskStatus from '../components/ActiveTaskStatus';
 import WelcomeModal from '../components/WelcomeModal';
 import AdSenseComponent from '../components/AdSenseComponent';
+import PWAStatus from '../components/PWAStatus';
 import NoSSR from '../components/NoSSR';
 import { ADSENSE_CONFIG } from '../config/adsense';
 
@@ -421,6 +422,9 @@ function HomeContent() {
             </Box>
           </Fade>
         </Container>
+
+        {/* Status PWA */}
+        <PWAStatus />
 
         {/* Overlay de fundo para criar profundidade */}
         <Box

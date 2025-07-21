@@ -17,6 +17,7 @@ import {
   InputAdornment,
   Button,
   Tooltip,
+  Alert,
 } from '@mui/material';
 import {
   Add,
@@ -26,12 +27,18 @@ import {
   PlayArrow,
   Pause,
   Timer,
+  CloudOff,
+  Sync,
 } from '@mui/icons-material';
+import { usePWA } from '../../hooks/usePWA';
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [pendingSync, setPendingSync] = useState(false);
+  
+  const { isOnline, syncTasks, sendNotification, isFeatureAvailableOffline } = usePWA();
 
   // Carregar tarefas do localStorage
   useEffect(() => {
@@ -39,7 +46,12 @@ const Tasks = () => {
     const savedTasks = localStorage.getItem('lofivora-tasks');
     if (savedTasks) {
       try {
-        setTasks(JSON.parse(savedTasks));
+        const parsedTasks = JSON.parse(savedTasks);
+        setTasks(parsedTasks);
+        
+        // Verificar se há tarefas pendentes de sincronização
+        const hasPendingTasks = parsedTasks.some(task => task.pendingSync);
+        setPendingSync(hasPendingTasks);
       } catch (error) {
         console.error('Erro ao carregar tarefas:', error);
       }

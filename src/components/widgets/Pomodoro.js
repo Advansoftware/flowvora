@@ -15,6 +15,7 @@ import {
   Pause,
   Refresh,
 } from '@mui/icons-material';
+import { usePWA } from '../../hooks/usePWA';
 
 const Pomodoro = () => {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -24,10 +25,15 @@ const Pomodoro = () => {
   const [mounted, setMounted] = useState(false);
   
   const intervalRef = useRef(null);
+  const { sendNotification, requestNotificationPermission, isFeatureAvailableOffline } = usePWA();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Solicitar permissão para notificações ao montar o componente
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      requestNotificationPermission();
+    }
+  }, [requestNotificationPermission]);
   
   const modes = useMemo(() => ({
     focus: { duration: 25 * 60, label: 'Foco', emoji: '🍅', color: '#ff5252' },
@@ -48,6 +54,26 @@ const Pomodoro = () => {
       clearInterval(intervalRef.current);
       
       if (timeLeft === 0) {
+        // Enviar notificação quando o timer terminar
+        const notificationTitle = mode === 'focus' 
+          ? '🍅 Pomodoro Completo!' 
+          : '✨ Pausa Terminada!';
+        
+        const notificationBody = mode === 'focus'
+          ? 'Parabéns! Você completou uma sessão de foco. Hora da pausa!'
+          : 'Sua pausa terminou. Pronto para mais uma sessão de foco?';
+
+        sendNotification(notificationTitle, {
+          body: notificationBody,
+          tag: 'pomodoro-timer',
+          requireInteraction: true,
+          icon: '/icon-512.svg',
+          actions: [
+            { action: 'start', title: 'Iniciar' },
+            { action: 'dismiss', title: 'Ok' }
+          ]
+        });
+
         if (mode === 'focus') {
           setCycles(prev => prev + 1);
           const nextMode = cycles > 0 && cycles % 4 === 3 ? 'longBreak' : 'shortBreak';
@@ -67,7 +93,7 @@ const Pomodoro = () => {
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, timeLeft, mode, cycles, modes]);
+  }, [isRunning, timeLeft, mode, cycles, modes, sendNotification]);
 
   const toggleTimer = () => {
     setIsRunning(!isRunning);
