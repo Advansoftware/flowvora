@@ -38,6 +38,11 @@ export const usePWA = () => {
         }));
         break;
         
+      case 'TIMER_PAUSED_FROM_NOTIFICATION':
+        // Timer foi pausado via notificação
+        window.dispatchEvent(new CustomEvent('timerPausedFromNotification'));
+        break;
+        
       case 'SYNC_COMPLETE':
         console.log('[PWA] Sincronização completa:', data);
         break;

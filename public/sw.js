@@ -1,5 +1,5 @@
 // Service Worker para LofiVora PWA - Versão Avançada
-const CACHE_NAME = 'lofivora-v2';
+const CACHE_NAME = 'flowvora-pwa-v3';
 const API_CACHE_NAME = 'lofivora-api-v2';
 
 // Arquivos para cache offline (tudo exceto player/AdSense)
@@ -171,6 +171,19 @@ self.addEventListener('notificationclick', (event) => {
       const clients = await self.clients.matchAll({ type: 'window' });
       
       switch (action) {
+        case 'pause':
+          // Pausar timer em background
+          stopBackgroundTimer();
+          
+          // Comunicar para a app que foi pausado
+          if (clients.length > 0) {
+            clients[0].postMessage({
+              type: 'TIMER_PAUSED_FROM_NOTIFICATION'
+            });
+            clients[0].focus();
+          }
+          break;
+          
         case 'start-next':
           // Comunicar para a app iniciar próximo ciclo
           if (clients.length > 0) {
@@ -195,7 +208,10 @@ self.addEventListener('notificationclick', (event) => {
           
         case 'dismiss':
         default:
-          // Apenas fecha a notificação
+          // Para notificações persistentes, apenas fecha
+          if (notificationData.type === 'persistent') {
+            // Não fazer nada, apenas fechou a notificação
+          }
           break;
       }
     })()
@@ -285,7 +301,8 @@ function startBackgroundTimer(data) {
     timeLeft: timeLeft,
     mode: mode,
     activeTask: activeTask,
-    startTime: Date.now()
+    startTime: Date.now(),
+    realStartTime: Date.now() // Tempo real de início
   };
   
   // Limpar timer anterior se existir
@@ -293,9 +310,17 @@ function startBackgroundTimer(data) {
     clearInterval(backgroundTimer);
   }
   
+  // Mostrar notificação persistente durante execução
+  showPersistentNotification();
+  
   // Iniciar novo timer
   backgroundTimer = setInterval(() => {
-    timerState.timeLeft--;
+    // Calcular tempo baseado no tempo real decorrido para evitar bugs
+    const realElapsed = Math.floor((Date.now() - timerState.realStartTime) / 1000);
+    timerState.timeLeft = Math.max(0, timeLeft - realElapsed);
+    
+    // Atualizar notificação persistente
+    updatePersistentNotification();
     
     // Quando terminar
     if (timerState.timeLeft <= 0) {
@@ -316,7 +341,68 @@ function stopBackgroundTimer() {
     backgroundTimer = null;
   }
   timerState.isRunning = false;
+  
+  // Remover notificação persistente
+  self.registration.getNotifications({ tag: 'pomodoro-running' }).then(notifications => {
+    notifications.forEach(notification => notification.close());
+  });
+  
   console.log('[SW] Timer parado');
+}
+
+function showPersistentNotification() {
+  const isPomodoro = timerState.mode === 'focus';
+  const taskName = timerState.activeTask?.text || 'Tarefa';
+  const timeFormatted = formatTime(timerState.timeLeft);
+  
+  const title = isPomodoro ? `🍅 ${timeFormatted} - Focando` : `☕ ${timeFormatted} - Pausando`;
+  const body = `${taskName}${isPomodoro ? ' • Modo Foco' : ' • Modo Pausa'}`;
+  
+  const options = {
+    body: body,
+    icon: '/icon-512.svg',
+    badge: '/favicon.svg',
+    tag: 'pomodoro-running',
+    requireInteraction: false,
+    silent: true,
+    persistent: true,
+    data: {
+      type: 'persistent',
+      timeLeft: timerState.timeLeft,
+      mode: timerState.mode,
+      taskName: taskName
+    },
+    actions: [
+      {
+        action: 'pause',
+        title: '⏸️ Pausar'
+      },
+      {
+        action: 'view-app',
+        title: '👁️ Ver App'
+      }
+    ]
+  };
+  
+  self.registration.showNotification(title, options);
+}
+
+function updatePersistentNotification() {
+  // Fechar notificação anterior
+  self.registration.getNotifications({ tag: 'pomodoro-running' }).then(notifications => {
+    notifications.forEach(notification => notification.close());
+  });
+  
+  // Mostrar nova notificação atualizada
+  if (timerState.isRunning) {
+    showPersistentNotification();
+  }
+}
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 function getTimerState() {

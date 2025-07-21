@@ -27,6 +27,8 @@ const Pomodoro = () => {
   const [cycles, setCycles] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [useBackgroundTimer, setUseBackgroundTimer] = useState(true);
+  const [timerStartTime, setTimerStartTime] = useState(null);
+  const [initialTimeLeft, setInitialTimeLeft] = useState(25 * 60);
   
   // Simular tarefa ativa por enquanto (depois será do contexto)
   const activeTask = useMemo(() => ({ 
@@ -57,6 +59,8 @@ const Pomodoro = () => {
     }
     setMode(newMode);
     setTimeLeft(modes[newMode].duration);
+    setInitialTimeLeft(modes[newMode].duration);
+    setTimerStartTime(null);
     setIsRunning(false);
   }, [useBackgroundTimer, stopBackgroundTimer, modes]);
 
@@ -77,10 +81,18 @@ const Pomodoro = () => {
       }
     };
 
+    // Escutar evento de pausa via notificação
+    const handleTimerPaused = () => {
+      setIsRunning(false);
+      setTimerStartTime(null);
+    };
+
     window.addEventListener('startNextCycle', handleStartNextCycle);
+    window.addEventListener('timerPausedFromNotification', handleTimerPaused);
     
     return () => {
       window.removeEventListener('startNextCycle', handleStartNextCycle);
+      window.removeEventListener('timerPausedFromNotification', handleTimerPaused);
     };
   }, [requestNotificationPermission, changeMode]);
 
@@ -140,8 +152,19 @@ const Pomodoro = () => {
   // Timer local (fallback quando background não disponível)
   useEffect(() => {
     if (!useBackgroundTimer && isRunning && timeLeft > 0) {
+      if (!timerStartTime) {
+        setTimerStartTime(Date.now());
+        setInitialTimeLeft(timeLeft);
+      }
+      
       intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
+        const elapsed = Math.floor((Date.now() - timerStartTime) / 1000);
+        const newTimeLeft = Math.max(0, initialTimeLeft - elapsed);
+        setTimeLeft(newTimeLeft);
+        
+        if (newTimeLeft <= 0) {
+          handleTimerComplete();
+        }
       }, 1000);
     } else if (!useBackgroundTimer) {
       clearInterval(intervalRef.current);
@@ -149,10 +172,14 @@ const Pomodoro = () => {
       if (timeLeft === 0) {
         handleTimerComplete();
       }
+      
+      if (!isRunning) {
+        setTimerStartTime(null);
+      }
     }
 
     return () => clearInterval(intervalRef.current);
-  }, [isRunning, timeLeft, mode, cycles, modes, sendNotification, useBackgroundTimer, handleTimerComplete]);
+  }, [isRunning, timeLeft, useBackgroundTimer, handleTimerComplete, timerStartTime, initialTimeLeft]);
 
   const startTimer = useCallback(() => {
     if (useBackgroundTimer && 'serviceWorker' in navigator) {
@@ -160,11 +187,17 @@ const Pomodoro = () => {
       if (success) {
         updateActiveTask(activeTask);
         setIsRunning(true);
+        setTimerStartTime(Date.now());
+        setInitialTimeLeft(timeLeft);
       } else {
         setUseBackgroundTimer(false);
+        setTimerStartTime(Date.now());
+        setInitialTimeLeft(timeLeft);
         setIsRunning(true);
       }
     } else {
+      setTimerStartTime(Date.now());
+      setInitialTimeLeft(timeLeft);
       setIsRunning(true);
     }
   }, [useBackgroundTimer, startBackgroundTimer, timeLeft, mode, activeTask, updateActiveTask]);
@@ -174,6 +207,7 @@ const Pomodoro = () => {
       stopBackgroundTimer();
     }
     setIsRunning(false);
+    setTimerStartTime(null);
   }, [useBackgroundTimer, stopBackgroundTimer]);
 
   const toggleTimer = () => {
@@ -181,19 +215,31 @@ const Pomodoro = () => {
       if (isRunning) {
         stopBackgroundTimer();
         setIsRunning(false);
+        setTimerStartTime(null);
       } else {
         const success = startBackgroundTimer(timeLeft, mode, activeTask);
         if (success) {
           updateActiveTask(activeTask);
           setIsRunning(true);
+          setTimerStartTime(Date.now());
+          setInitialTimeLeft(timeLeft);
         } else {
           // Fallback para timer local
           setUseBackgroundTimer(false);
+          setTimerStartTime(Date.now());
+          setInitialTimeLeft(timeLeft);
           setIsRunning(true);
         }
       }
     } else {
-      setIsRunning(!isRunning);
+      if (isRunning) {
+        setIsRunning(false);
+        setTimerStartTime(null);
+      } else {
+        setTimerStartTime(Date.now());
+        setInitialTimeLeft(timeLeft);
+        setIsRunning(true);
+      }
     }
   };
 
@@ -202,7 +248,9 @@ const Pomodoro = () => {
       stopBackgroundTimer();
     }
     setIsRunning(false);
+    setTimerStartTime(null);
     setTimeLeft(currentMode.duration);
+    setInitialTimeLeft(currentMode.duration);
   };
 
   const formatTime = (seconds) => {
