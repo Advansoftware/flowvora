@@ -68,12 +68,39 @@ const ActionButton = ({
     }
   };
 
+  const handleClick = (e) => {
+    // Prevenir múltiplos cliques rápidos
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (onClick && !disabled) {
+      console.log('[ActionButton] Click triggered:', { 
+        disabled,
+        timestamp: Date.now(),
+        isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      });
+      onClick(e);
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    // Para mobile, garantir que o touch seja reconhecido
+    if (!disabled) {
+      console.log('[ActionButton] Touch start:', Date.now());
+    }
+  };
+
   return (
     <IconButton
-      onClick={onClick}
+      onClick={handleClick}
+      onTouchStart={handleTouchStart}
       disabled={disabled}
       sx={{
         ...getVariantStyles(),
+        // Melhorar responsividade no mobile
+        touchAction: 'manipulation',
+        userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
         ...sx,
       }}
       {...props}

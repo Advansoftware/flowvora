@@ -193,24 +193,32 @@ const Pomodoro = () => {
   // Timer principal - totalmente front-end, precisão de segundo
   useEffect(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isPWA = window.matchMedia('(display-mode: standalone)').matches;
     
     console.log('[Pomodoro Debug] Timer effect triggered:', {
       isRunning,
       timeLeft,
       timerStartTime,
+      initialTimeLeft,
       isAndroid,
+      isMobile,
       isPWA,
       hasUserActivation: navigator.userActivation?.hasBeenActive || false
     });
 
     if (isRunning && timeLeft > 0) {
+      // Garantir que timerStartTime está definido
       if (!timerStartTime) {
+        console.log('[Pomodoro Debug] WARNING: timerStartTime not set, using current time');
         const startTime = Date.now();
         setTimerStartTime(startTime);
         setInitialTimeLeft(timeLeft);
-        console.log('[Pomodoro Debug] Timer started at:', new Date(startTime).toISOString());
+        console.log('[Pomodoro Debug] Timer started at (fallback):', new Date(startTime).toISOString());
+        return; // Retornar para aguardar o próximo ciclo com o timerStartTime definido
       }
+      
+      console.log('[Pomodoro Debug] Creating interval with timerStartTime:', new Date(timerStartTime).toISOString());
       
       intervalRef.current = setInterval(() => {
         const now = Date.now();
@@ -265,42 +273,57 @@ const Pomodoro = () => {
 
   const startTimer = useCallback(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const isPWA = window.matchMedia('(display-mode: standalone)').matches;
     
     console.log('[Pomodoro Debug] Starting timer:', { 
       timeLeft,
       mode,
       isAndroid,
+      isMobile,
       isPWA,
       hasUserActivation: navigator.userActivation?.hasBeenActive || false,
       visibilityState: document.visibilityState,
-      hasFocus: document.hasFocus()
+      hasFocus: document.hasFocus(),
+      currentTime: Date.now()
     });
 
-    // Enviar notificação de início
-    const taskName = activeTask?.text || 'Tarefa';
-    const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
-    const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
-    
-    sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
-      body: `${taskName} • ${formatTime(timeLeft)}`,
-      tag: 'pomodoro-start',
-      requireInteraction: false,
-      icon: '/icon-512.svg',
-      silent: true
-    });
+    try {
+      // Configurar o estado local PRIMEIRO (crítico para mobile)
+      const startTime = Date.now();
+      console.log('[Pomodoro Debug] Setting timer state immediately...');
+      
+      setTimerStartTime(startTime);
+      setInitialTimeLeft(timeLeft);
+      setIsRunning(true);
+      
+      console.log('[Pomodoro Debug] Timer state set successfully:', {
+        timerStartTime: new Date(startTime).toISOString(),
+        initialTimeLeft: timeLeft,
+        isRunning: true
+      });
 
-    // Configurar o estado local
-    const startTime = Date.now();
-    setTimerStartTime(startTime);
-    setInitialTimeLeft(timeLeft);
-    setIsRunning(true);
-    
-    console.log('[Pomodoro Debug] Timer state set:', {
-      timerStartTime: new Date(startTime).toISOString(),
-      initialTimeLeft: timeLeft,
-      isRunning: true
-    });
+      // Enviar notificação de início (após definir o estado)
+      const taskName = activeTask?.text || 'Tarefa';
+      const modeText = mode === 'focus' ? 'Foco' : mode === 'shortBreak' ? 'Pausa' : 'Descanso Prolongado';
+      const modeEmoji = mode === 'focus' ? '🍅' : mode === 'shortBreak' ? '☕' : '🌟';
+      
+      // No mobile, notificação pode falhar silenciosamente sem afetar o timer
+      try {
+        sendNotification(`${modeEmoji} ${modeText} Iniciado`, {
+          body: `${taskName} • ${formatTime(timeLeft)}`,
+          tag: 'pomodoro-start',
+          requireInteraction: false,
+          icon: '/icon-512.svg',
+          silent: true
+        });
+      } catch (notificationError) {
+        console.log('[Pomodoro Debug] Notification failed (non-critical):', notificationError);
+      }
+
+    } catch (error) {
+      console.error('[Pomodoro Debug] Error starting timer:', error);
+    }
   }, [timeLeft, mode, activeTask, sendNotification]);
 
   const pauseTimer = useCallback(() => {
@@ -310,18 +333,27 @@ const Pomodoro = () => {
   }, []);
 
   const toggleTimer = () => {
-    console.log('[Pomodoro Debug] Toggle timer:', { 
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    console.log('[Pomodoro Debug] Toggle timer called:', { 
       isRunning, 
       timeLeft,
-      hasIntervalRef: !!intervalRef.current 
+      hasIntervalRef: !!intervalRef.current,
+      isMobile,
+      timestamp: Date.now(),
+      event: 'user-interaction'
     });
 
-    if (isRunning) {
-      // Pausar timer
-      pauseTimer();
-    } else {
-      // Iniciar timer
-      startTimer();
+    try {
+      if (isRunning) {
+        console.log('[Pomodoro Debug] Calling pauseTimer...');
+        pauseTimer();
+      } else {
+        console.log('[Pomodoro Debug] Calling startTimer...');
+        startTimer();
+      }
+    } catch (error) {
+      console.error('[Pomodoro Debug] Error in toggleTimer:', error);
     }
   };
 

@@ -32,6 +32,9 @@ const UpdatePopover = () => {
     if (updateStatus.status === 'available' && mounted) {
       // Detectar se é Android para comportamento mais agressivo
       const isAndroid = /Android/i.test(navigator.userAgent);
+      // Detectar se está em modo PWA
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                    window.matchMedia('(display-mode: fullscreen)').matches;
       
       // Criar um elemento virtual para posicionar o popover
       const virtualEl = {
@@ -46,14 +49,19 @@ const UpdatePopover = () => {
       };
       setAnchorEl(virtualEl);
       
-      // No Android, auto-atualizar após 3 segundos se não interagir
-      if (isAndroid) {
+      // NUNCA auto-atualizar no PWA - sempre exigir interação do usuário
+      // No Android, auto-atualizar após 3 segundos se não interagir APENAS se for browser
+      if (isAndroid && !isPWA) {
         const autoUpdateTimer = setTimeout(() => {
-          console.log('[UpdatePopover] Auto-atualizando no Android');
+          console.log('[UpdatePopover] Auto-atualizando no Android (apenas browser)');
           startUpdate();
         }, 3000);
         
         return () => clearTimeout(autoUpdateTimer);
+      }
+      
+      if (isPWA) {
+        console.log('[UpdatePopover] PWA detectado - atualização manual obrigatória');
       }
     } else {
       setAnchorEl(null);
