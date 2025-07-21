@@ -13,9 +13,11 @@ import {
 import { PlayArrow, MusicNote } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { usePlayer } from '../contexts/PlayerContext';
+import { usePWA } from '../hooks/usePWA';
 
 const WelcomeModal = ({ open, onStart }) => {
   const { isReady } = usePlayer();
+  const { isOnline } = usePWA();
   const [isClient, setIsClient] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
 
@@ -28,12 +30,35 @@ const WelcomeModal = ({ open, onStart }) => {
   }, []);
 
   const handleStart = () => {
-    // Só permitir iniciar se o player estiver pronto
-    if (!isReady) return;
-    
-    // O player será iniciado pelo handleStartExperience em page.js
+    // Permitir iniciar sempre - mesmo se player não estiver pronto (modo offline)
+    // O player será iniciado pelo handleStartExperience em page.js se estiver disponível
     onStart();
   };
+
+  // Determinar o status do botão baseado no estado online/offline e player
+  const getButtonStatus = () => {
+    if (!isOnline) {
+      return {
+        enabled: true, // Sempre permitir entrar quando offline
+        text: 'Entrar no Flow (Modo Offline)',
+        subtitle: 'Funcionalidades offline disponíveis'
+      };
+    } else if (isReady) {
+      return {
+        enabled: true,
+        text: 'Entrar no Flow',
+        subtitle: 'Player carregado e pronto'
+      };
+    } else {
+      return {
+        enabled: true, // Permitir entrar mesmo se player não estiver pronto
+        text: 'Entrar no Flow',
+        subtitle: 'Carregando player...'
+      };
+    }
+  };
+
+  const buttonStatus = getButtonStatus();
 
   return (
     <Modal
@@ -213,7 +238,7 @@ const WelcomeModal = ({ open, onStart }) => {
               >
                 <Button
                   onClick={handleStart}
-                  disabled={!isReady}
+                  disabled={!buttonStatus.enabled}
                   variant="contained"
                   size="large"
                   startIcon={<PlayArrow />}
@@ -222,28 +247,36 @@ const WelcomeModal = ({ open, onStart }) => {
                     py: 2,
                     px: 4,
                     borderRadius: 3,
-                    background: isReady 
-                      ? 'linear-gradient(45deg, #6366f1 30%, #8b5cf6 90%)'
+                    background: buttonStatus.enabled 
+                      ? !isOnline 
+                        ? 'linear-gradient(45deg, #f59e0b 30%, #f97316 90%)' // Laranja para offline
+                        : 'linear-gradient(45deg, #6366f1 30%, #8b5cf6 90%)' // Roxo para online
                       : 'linear-gradient(45deg, #4b5563 30%, #6b7280 90%)',
-                    boxShadow: isReady 
-                      ? '0 8px 32px rgba(99, 102, 241, 0.3)'
+                    boxShadow: buttonStatus.enabled 
+                      ? !isOnline
+                        ? '0 8px 32px rgba(245, 158, 11, 0.3)'
+                        : '0 8px 32px rgba(99, 102, 241, 0.3)'
                       : '0 4px 16px rgba(75, 85, 99, 0.2)',
                     textTransform: 'none',
                     fontWeight: 500,
-                    minWidth: 200,
-                    opacity: isReady ? 1 : 0.7,
-                    cursor: isReady ? 'pointer' : 'not-allowed',
+                    minWidth: 250,
+                    opacity: buttonStatus.enabled ? 1 : 0.7,
+                    cursor: buttonStatus.enabled ? 'pointer' : 'not-allowed',
                     '&:hover': {
-                      background: isReady 
-                        ? 'linear-gradient(45deg, #5856eb 30%, #7c3aed 90%)'
+                      background: buttonStatus.enabled 
+                        ? !isOnline
+                          ? 'linear-gradient(45deg, #ea580c 30%, #dc2626 90%)'
+                          : 'linear-gradient(45deg, #5856eb 30%, #7c3aed 90%)'
                         : 'linear-gradient(45deg, #4b5563 30%, #6b7280 90%)',
-                      boxShadow: isReady 
-                        ? '0 12px 40px rgba(99, 102, 241, 0.4)'
+                      boxShadow: buttonStatus.enabled 
+                        ? !isOnline
+                          ? '0 12px 40px rgba(245, 158, 11, 0.4)'
+                          : '0 12px 40px rgba(99, 102, 241, 0.4)'
                         : '0 4px 16px rgba(75, 85, 99, 0.2)',
-                      transform: isReady ? 'translateY(-2px)' : 'none',
+                      transform: buttonStatus.enabled ? 'translateY(-2px)' : 'none',
                     },
                     '&:active': {
-                      transform: isReady ? 'translateY(0px)' : 'none',
+                      transform: buttonStatus.enabled ? 'translateY(0px)' : 'none',
                     },
                     '&:disabled': {
                       background: 'linear-gradient(45deg, #4b5563 30%, #6b7280 90%)',
@@ -252,8 +285,21 @@ const WelcomeModal = ({ open, onStart }) => {
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
-                  {isReady ? 'Entrar no Flow' : 'Preparando...'}
+                  {buttonStatus.text}
                 </Button>
+                
+                {/* Subtitle do botão */}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: 'block',
+                    mt: 1,
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  {buttonStatus.subtitle}
+                </Typography>
               </motion.div>
 
               {/* Indicadores de recursos */}

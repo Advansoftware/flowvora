@@ -89,6 +89,7 @@ function HomeContent() {
     }
     
     // Iniciar ou continuar reprodução baseado no estado anterior
+    // Só tentar tocar se o player estiver pronto (online) E se deveria estar tocando
     if (isReady && shouldPlay) {
       startPlaying();
     }
@@ -423,8 +424,8 @@ function HomeContent() {
           </Fade>
         </Container>
 
-        {/* Status PWA */}
-        <PWAStatus />
+        {/* Status PWA - esconder mensagem offline durante welcome */}
+        <PWAStatus hideOfflineMessage={showWelcome} />
 
         {/* Overlay de fundo para criar profundidade */}
         <Box

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Box, Fade } from '@mui/material';
+import { Box, Fade, Typography, Stack } from '@mui/material';
+import { WifiOff, MusicOff } from '@mui/icons-material';
 import YouTube from 'react-youtube';
 import { usePlayer } from '../contexts/PlayerContext';
+import { usePWA } from '../hooks/usePWA';
 import scenes from '../data/scenes.json';
 import PlayerControls from './PlayerControls';
 
@@ -18,6 +20,8 @@ export default function VisualFrame() {
     onPlayerReady,
     onPlayerStateChange,
   } = usePlayer();
+
+  const { isOnline } = usePWA();
 
   const [currentScene, setCurrentScene] = useState(0);
   const [imageError, setImageError] = useState(false);
@@ -168,6 +172,118 @@ export default function VisualFrame() {
           pointerEvents: 'none',
         }}
       />
+
+      {/* Overlay de modo offline */}
+      <Fade in={!isOnline} timeout={500}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: !isOnline ? 'flex' : 'none',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100, // Acima dos controles do player (50) mas abaixo de modais (1000+)
+            borderRadius: 3,
+            backgroundImage: 'url(/meia-noite.png)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 3,
+            }
+          }}
+        >
+          <Stack
+            spacing={3}
+            alignItems="center"
+            sx={{
+              position: 'relative',
+              zIndex: 1,
+              textAlign: 'center',
+              px: 4,
+            }}
+          >
+            {/* Ícone de offline */}
+            <Box
+              sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <WifiOff 
+                sx={{ 
+                  fontSize: 48,
+                  color: '#ff9800',
+                  filter: 'drop-shadow(0 0 10px rgba(255, 152, 0, 0.3))',
+                }} 
+              />
+              <MusicOff
+                sx={{
+                  position: 'absolute',
+                  fontSize: 24,
+                  color: '#fff',
+                  bottom: -4,
+                  right: -4,
+                }}
+              />
+            </Box>
+
+            {/* Mensagem principal */}
+            <Typography
+              variant="h6"
+              sx={{
+                color: '#fff',
+                fontWeight: 600,
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+                mb: 1,
+              }}
+            >
+              Player Indisponível
+            </Typography>
+
+            {/* Mensagem secundária */}
+            <Typography
+              variant="body1"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+                maxWidth: 300,
+                lineHeight: 1.5,
+              }}
+            >
+              Você está no modo offline. O player de música não está disponível sem conexão com a internet.
+            </Typography>
+
+            {/* Mensagem de funcionalidades disponíveis */}
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+                fontStyle: 'italic',
+              }}
+            >
+              ✨ Pomodoro e Tarefas funcionam offline
+            </Typography>
+          </Stack>
+        </Box>
+      </Fade>
 
       {/* Controles do Player */}
       <PlayerControls />

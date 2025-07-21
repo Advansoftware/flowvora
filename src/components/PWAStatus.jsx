@@ -19,7 +19,7 @@ import {
 } from '@mui/icons-material';
 import { usePWA } from '../hooks/usePWA';
 
-export default function PWAStatus() {
+export default function PWAStatus({ hideOfflineMessage = false }) {
   const {
     isOnline,
     isInstallable,
@@ -33,9 +33,9 @@ export default function PWAStatus() {
 
   return (
     <>
-      {/* Indicador de status offline */}
+      {/* Indicador de status offline - não mostrar durante welcome */}
       <Snackbar
-        open={showOfflineMessage}
+        open={showOfflineMessage && !hideOfflineMessage}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         sx={{ zIndex: 9999 }}
       >
