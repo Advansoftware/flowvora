@@ -7,13 +7,27 @@ export const metadata = {
   keywords: ["lo-fi", "foco", "produtividade", "música", "concentração", "relaxamento"],
   authors: [{ name: "LofiVora Team" }],
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icon-512.svg", sizes: "180x180", type: "image/svg+xml" },
+    ],
   },
   openGraph: {
     title: "LofiVora - Your Personal Lo-fi Focus Space",
     description: "Ambiente relaxante para foco e produtividade com música lo-fi",
     type: "website",
+    images: [
+      {
+        url: "/icon-512.svg",
+        width: 512,
+        height: 512,
+        alt: "LofiVora Logo",
+      },
+    ],
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }) {

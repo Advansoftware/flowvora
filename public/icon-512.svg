@@ -1,0 +1,57 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo com gradiente lo-fi -->
+  <defs>
+    <linearGradient id="lofiGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#16213e;stop-opacity:1" />
+      <stop offset="70%" style="stop-color:#0f0f23;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1a2e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#64b5f6;stop-opacity:0.9" />
+      <stop offset="33%" style="stop-color:#81c784;stop-opacity:1" />
+      <stop offset="66%" style="stop-color:#ba68c8;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#ff9d7f;stop-opacity:0.8" />
+    </linearGradient>
+    <radialGradient id="glowEffect" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#64b5f6;stop-opacity:0.3" />
+      <stop offset="70%" style="stop-color:#ba68c8;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#0f0f23;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Fundo circular com borda -->
+  <circle cx="256" cy="256" r="240" fill="url(#lofiGradient)" stroke="#64b5f6" stroke-width="4"/>
+  
+  <!-- Efeito de brilho interno -->
+  <circle cx="256" cy="256" r="220" fill="url(#glowEffect)"/>
+  
+  <!-- Ondas sonoras principais -->
+  <path d="M80 180 Q150 140, 256 180 Q350 220, 432 180" stroke="url(#waveGradient)" stroke-width="12" fill="none" opacity="0.9" stroke-linecap="round"/>
+  <path d="M80 256 Q150 216, 256 256 Q350 296, 432 256" stroke="url(#waveGradient)" stroke-width="12" fill="none" opacity="0.8" stroke-linecap="round"/>
+  <path d="M80 332 Q150 292, 256 332 Q350 372, 432 332" stroke="url(#waveGradient)" stroke-width="12" fill="none" opacity="0.7" stroke-linecap="round"/>
+  
+  <!-- Ondas menores para detalhamento -->
+  <path d="M120 210 Q180 190, 256 210 Q320 230, 390 210" stroke="#81c784" stroke-width="6" fill="none" opacity="0.6" stroke-linecap="round"/>
+  <path d="M120 302 Q180 282, 256 302 Q320 322, 390 302" stroke="#ba68c8" stroke-width="6" fill="none" opacity="0.6" stroke-linecap="round"/>
+  
+  <!-- Nota musical estilizada (maior e mais detalhada) -->
+  <circle cx="180" cy="140" r="24" fill="#81c784"/>
+  <rect x="204" y="80" width="12" height="120" fill="#81c784" rx="2"/>
+  <path d="M216 80 Q260 60, 300 80 Q260 100, 216 120" fill="#ba68c8"/>
+  
+  <!-- Nota musical menor -->
+  <circle cx="320" cy="380" r="16" fill="#ff9d7f"/>
+  <rect x="336" y="340" width="8" height="80" fill="#ff9d7f" rx="1"/>
+  
+  <!-- Pontos de foco (representing meditation/focus) -->
+  <circle cx="340" cy="160" r="8" fill="#64b5f6" opacity="0.8"/>
+  <circle cx="180" cy="360" r="6" fill="#ba68c8" opacity="0.7"/>
+  <circle cx="400" cy="300" r="4" fill="#81c784" opacity="0.6"/>
+  
+  <!-- Efeito de partículas -->
+  <circle cx="150" cy="200" r="3" fill="#64b5f6" opacity="0.5"/>
+  <circle cx="380" cy="180" r="2" fill="#ff9d7f" opacity="0.6"/>
+  <circle cx="200" cy="320" r="2" fill="#81c784" opacity="0.5"/>
+  <circle cx="360" cy="340" r="3" fill="#ba68c8" opacity="0.4"/>
+</svg>
