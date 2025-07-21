@@ -29,6 +29,19 @@ export function TaskProvider({ children }) {
           console.error('Erro ao carregar tarefa ativa:', error);
         }
       }
+      
+      // Listener para limpeza completa dos dados
+      const handleClearAllData = () => {
+        console.log('[TaskContext] Limpando todos os dados do contexto');
+        setTasks([]);
+        setActiveTask(null);
+      };
+      
+      window.addEventListener('clearAllAppData', handleClearAllData);
+      
+      return () => {
+        window.removeEventListener('clearAllAppData', handleClearAllData);
+      };
     }
   }, []);
 

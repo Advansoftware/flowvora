@@ -12,16 +12,68 @@ export const useSettings = () => {
   });
   const [loading, setLoading] = useState(true);
 
+  // Valores padrão seguros
+  const getDefaultSettings = () => ({
+    focusTime: 25,
+    shortBreakTime: 5,
+    longBreakTime: 15,
+    playlists: []
+  });
+
   useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const loadedSettings = await storageService.getSettings();
+        // Garantir que sempre temos valores válidos
+        const safeSettings = {
+          ...getDefaultSettings(),
+          ...loadedSettings,
+          // Garantir que playlists seja sempre um array
+          playlists: Array.isArray(loadedSettings?.playlists) ? loadedSettings.playlists : []
+        };
+        setSettings(safeSettings);
+      } catch (error) {
+        console.error('Erro ao carregar configurações:', error);
+        // Em caso de erro, usar valores padrão
+        setSettings(getDefaultSettings());
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     loadSettings();
+    
+    // Listener para limpeza completa dos dados
+    const handleClearAllData = () => {
+      console.log('[useSettings] Resetando configurações para padrão');
+      const defaultSettings = getDefaultSettings();
+      setSettings(defaultSettings);
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('clearAllAppData', handleClearAllData);
+      
+      return () => {
+        window.removeEventListener('clearAllAppData', handleClearAllData);
+      };
+    }
   }, []);
 
   const loadSettings = async () => {
     try {
       const loadedSettings = await storageService.getSettings();
-      setSettings(loadedSettings);
+      // Garantir que sempre temos valores válidos
+      const safeSettings = {
+        ...getDefaultSettings(),
+        ...loadedSettings,
+        // Garantir que playlists seja sempre um array
+        playlists: Array.isArray(loadedSettings?.playlists) ? loadedSettings.playlists : []
+      };
+      setSettings(safeSettings);
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
+      // Em caso de erro, usar valores padrão
+      setSettings(getDefaultSettings());
     } finally {
       setLoading(false);
     }

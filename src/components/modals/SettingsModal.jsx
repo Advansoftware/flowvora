@@ -36,6 +36,14 @@ const SettingsModal = ({ open, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Valores padrão seguros
+  const getDefaultSettings = () => ({
+    focusTime: 25,
+    shortBreakTime: 5,
+    longBreakTime: 15,
+    playlists: []
+  });
+
   useEffect(() => {
     if (open) {
       loadSettings();
@@ -45,18 +53,40 @@ const SettingsModal = ({ open, onClose }) => {
   const loadSettings = async () => {
     try {
       const loadedSettings = await storageService.getSettings();
-      setSettings(loadedSettings);
+      // Garantir que sempre temos valores válidos
+      const safeSettings = {
+        ...getDefaultSettings(),
+        ...loadedSettings,
+        // Garantir que playlists seja sempre um array
+        playlists: Array.isArray(loadedSettings?.playlists) ? loadedSettings.playlists : []
+      };
+      setSettings(safeSettings);
     } catch (error) {
       console.error('Erro ao carregar configurações:', error);
+      // Em caso de erro, usar valores padrão
+      setSettings(getDefaultSettings());
       setMessage('Erro ao carregar configurações');
     }
   };
 
   const saveSettings = async () => {
     setLoading(true);
+    setMessage('Salvando configurações...');
+    
     try {
-      await storageService.setSettings(settings);
+      // Validar dados antes de salvar
+      const safeSettings = {
+        ...settings,
+        focusTime: Math.max(1, Math.min(60, Number(settings.focusTime) || 25)),
+        shortBreakTime: Math.max(1, Math.min(30, Number(settings.shortBreakTime) || 5)),
+        longBreakTime: Math.max(5, Math.min(60, Number(settings.longBreakTime) || 15)),
+        playlists: Array.isArray(settings.playlists) ? settings.playlists : []
+      };
+      
+      await storageService.setSettings(safeSettings);
+      setSettings(safeSettings);
       setMessage('Configurações salvas com sucesso!');
+      
       setTimeout(() => {
         setMessage('');
         onClose();
@@ -64,6 +94,7 @@ const SettingsModal = ({ open, onClose }) => {
     } catch (error) {
       console.error('Erro ao salvar configurações:', error);
       setMessage('Erro ao salvar configurações');
+      setTimeout(() => setMessage(''), 3000);
     } finally {
       setLoading(false);
     }
@@ -72,22 +103,42 @@ const SettingsModal = ({ open, onClose }) => {
   const clearAllData = async () => {
     if (window.confirm('Tem certeza que deseja limpar todos os dados do aplicativo? Esta ação não pode ser desfeita.')) {
       setLoading(true);
+      setMessage('Limpando dados...');
+      
       try {
+        // Limpar dados do storage
         await storageService.clear();
-        setMessage('Todos os dados foram limpos!');
-        setSettings({
-          focusTime: 25,
-          shortBreakTime: 5,
-          longBreakTime: 15,
-          playlists: []
-        });
+        
+        // Resetar para valores padrão
+        const defaultSettings = getDefaultSettings();
+        setSettings(defaultSettings);
+        
+        // Limpar outros estados da aplicação
+        if (typeof window !== 'undefined') {
+          // Limpar cache do Service Worker
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+          }
+          
+          // Disparar evento personalizado para outros componentes limparem seus estados
+          window.dispatchEvent(new CustomEvent('clearAllAppData'));
+        }
+        
+        setMessage('Todos os dados foram limpos com sucesso!');
+        
+        // Recarregar após um tempo para garantir limpeza completa
         setTimeout(() => {
-          setMessage('');
-          window.location.reload(); // Recarregar para aplicar mudanças
-        }, 1500);
+          setMessage('Recarregando aplicação...');
+          window.location.reload(true);
+        }, 2000);
+        
       } catch (error) {
         console.error('Erro ao limpar dados:', error);
-        setMessage('Erro ao limpar dados');
+        setMessage('Erro ao limpar dados. Tente novamente.');
+        setTimeout(() => setMessage(''), 3000);
       } finally {
         setLoading(false);
       }
