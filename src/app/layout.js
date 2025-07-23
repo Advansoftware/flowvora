@@ -65,6 +65,8 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <head>
+        {/* Metatag de verificação do Google AdSense */}
+        <meta name="google-adsense-account" content="ca-pub-9942287479317473" />
         {/* Meta tags para PWA imersivo no mobile */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
