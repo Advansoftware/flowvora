@@ -7,9 +7,9 @@ export const ADSENSE_CONFIG = {
   
   // IDs dos slots de anúncio
   SLOTS: {
-    SIDEBAR: '1234567890',      // Anúncio lateral na sidebar desktop
-    MOBILE_BANNER: '0987654321', // Banner responsivo no mobile
-    BOTTOM_BANNER: '1122334455', // Banner inferior no desktop
+    SIDEBAR: '9677564878',      // Anúncio lateral na sidebar desktop
+    MOBILE_BANNER: '1200309052', // Banner responsivo no mobile
+    BOTTOM_BANNER: '7051401535', // Banner inferior no desktop
   }
 };
 
