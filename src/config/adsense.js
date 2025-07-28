@@ -3,7 +3,7 @@
 
 export const ADSENSE_CONFIG = {
   // Seu ID do cliente AdSense (ca-pub-xxxxxxxxxxxxxxxx)
-  CLIENT_ID: 'ca-pub-1234567890123456', // SUBSTITUIR pelo seu ID real
+  CLIENT_ID: 'ca-pub-9942287479317473', // ID real do AdSense
   
   // IDs dos slots de anúncio
   SLOTS: {

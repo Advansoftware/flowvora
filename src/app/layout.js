@@ -33,7 +33,7 @@ export const metadata = {
   openGraph: {
     title: 'LofiVora - Foco e Produtividade',
     description: 'Ambiente focado para produtividade com música lo-fi, chuva e técnica Pomodoro',
-    url: 'https://lofivora.vercel.app',
+    url: 'https://lofivora.space',
     siteName: 'LofiVora',
     images: [
       {
@@ -67,6 +67,14 @@ export default function RootLayout({ children }) {
       <head>
         {/* Metatag de verificação do Google AdSense */}
         <meta name="google-adsense-account" content="ca-pub-9942287479317473" />
+        
+        {/* Script do Google AdSense */}
+        <script 
+          async 
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9942287479317473"
+          crossOrigin="anonymous"
+        ></script>
+        
         {/* Meta tags para PWA imersivo no mobile */}
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
